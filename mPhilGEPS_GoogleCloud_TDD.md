@@ -156,6 +156,148 @@ graph TD
 *   **Legal / RA 12009 Agent:** Grounded in a Vertex AI Search corpus containing the full text of Republic Act 12009 and historical GPPB resolutions.
 *   **COA Auditor Agent:** Synthesizes complex anomaly detection reports from BigQuery ML into readable narratives for investigators.
 
+
+---
+
+## 5. Subsystem Deep Dive: APP-CSE Submission Portal
+
+To illustrate the concrete implementation path, this section provides the code-ready technical design for the **APP-CSE (Annual Procurement Plan - Common-Use Supplies and Equipment) Submission Portal**.
+
+### 5.1 Architecture & End-to-End Sequence
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Officer as Agency Procurement Officer
+    participant UI as Next.js Web Portal
+    participant API as ProcurementPlanningService (FastAPI)
+    participant GCS as Cloud Storage Bucket (app-cse-uploads)
+    participant Tasks as Cloud Tasks / Pub/Sub
+    participant Worker as Asynchronous Parser Worker
+    participant DocAI as Document AI / Gemini Flash
+    participant DB as PostgreSQL / AlloyDB
+    participant BQ as BigQuery (Demand Forecasting)
+
+    Officer->>UI: Uploads signed APP-CSE (.xlsx / .pdf) or fills web form
+    UI->>API: POST /api/v1/app-cse/upload
+    API->>GCS: Stage file in GCS
+    API->>DB: Create submission record (Status: PROCESSING)
+    API->>Tasks: Enqueue parse & validation task
+    API-->>UI: Return submission_id & 202 Accepted
+    
+    Tasks->>Worker: Consume task
+    Worker->>GCS: Download workbook
+    Worker->>DocAI: Extract line items & validate against budget
+    Worker->>DocAI: Auto-map descriptions to UNSPSC codes
+    Worker->>DB: Persist normalized line items (Status: VALIDATED)
+    Worker->>BQ: Stream validated records for Demand Forecast
+    UI->>API: Poll GET /api/v1/app-cse/{id}/status
+    API-->>UI: Return validation summary & budget variance
+```
+
+### 5.2 Frontend Component Architecture
+*   **`AppCseUploaderComponent`:** Drag-and-drop zone with client-side file signature validation (`.xlsx`, `.pdf`), file size limit enforcement (max 25MB), and upload progress reporting.
+*   **`AppCseLineItemGrid`:** Virtualized dynamic table (e.g., AG Grid / TanStack Table) allowing agencies to adjust quarterly quantities (Q1–Q4), unit prices, and target delivery depots.
+*   **`BudgetValidationBadge`:** Real-time visual indicator comparing the total estimated cost of Common-Use Supplies against the agency's approved budget allocation.
+
+### 5.3 REST API Contracts (OpenAPI)
+
+#### `POST /api/v1/app-cse/upload`
+*   **Purpose:** Initial staging of uploaded APP-CSE Excel workbook or PDF.
+*   **Request:** `multipart/form-data` with `agency_id`, `fiscal_year`, and `file`.
+*   **Response (202 Accepted):**
+```json
+{
+  "submission_id": "cse-2026-0912-abcd",
+  "agency_id": "NGA-DEPED-001",
+  "fiscal_year": 2026,
+  "status": "PROCESSING",
+  "file_uri": "gs://mphilgeps-app-cse-uploads/2026/NGA-DEPED-001/app_cse.xlsx",
+  "estimated_completion_seconds": 15
+}
+```
+
+#### `GET /api/v1/app-cse/{submission_id}`
+*   **Purpose:** Fetch submission status, extracted line items, and budget validation results.
+*   **Response (200 OK):**
+```json
+{
+  "submission_id": "cse-2026-0912-abcd",
+  "status": "COMPLETED",
+  "total_items": 42,
+  "total_estimated_budget": 1250000.00,
+  "allocated_budget": 1500000.00,
+  "budget_status": "WITHIN_LIMIT",
+  "items": [
+    {
+      "item_code": "44122011-FO-F01",
+      "unspsc_code": "44122011",
+      "description": "FOLDER, FANCY, A4",
+      "q1_qty": 500,
+      "q2_qty": 500,
+      "q3_qty": 200,
+      "q4_qty": 200,
+      "total_qty": 1400,
+      "unit_price": 42.50,
+      "total_amount": 59500.00,
+      "preferred_depot": "DEPOT-NCR-MANILA"
+    }
+  ],
+  "validation_errors": []
+}
+```
+
+#### `POST /api/v1/app-cse/{submission_id}/submit`
+*   **Purpose:** Final cryptographic submission and locking of the APP-CSE.
+*   **Response:** 200 OK with digital signature hash and submission timestamp.
+
+### 5.4 Database Schema (DDL)
+
+```sql
+-- Main APP-CSE Submission Metadata
+CREATE TABLE app_cse_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    agency_id VARCHAR(64) NOT NULL REFERENCES agencies(id),
+    fiscal_year INT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'DRAFT', -- DRAFT, PROCESSING, VALIDATED, SUBMITTED, REJECTED
+    gcs_raw_uri TEXT NOT NULL,
+    total_estimated_budget NUMERIC(15, 2) DEFAULT 0.00,
+    allocated_budget NUMERIC(15, 2) DEFAULT 0.00,
+    submission_hash VARCHAR(64),
+    submitted_by UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Individual Normalized Line Items
+CREATE TABLE app_cse_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    submission_id UUID NOT NULL REFERENCES app_cse_submissions(id) ON DELETE CASCADE,
+    item_code VARCHAR(64),
+    unspsc_code VARCHAR(16) NOT NULL,
+    raw_description TEXT NOT NULL,
+    standardized_description TEXT,
+    unit_of_measure VARCHAR(32) NOT NULL,
+    unit_price NUMERIC(12, 2) NOT NULL,
+    q1_qty INT DEFAULT 0,
+    q2_qty INT DEFAULT 0,
+    q3_qty INT DEFAULT 0,
+    q4_qty INT DEFAULT 0,
+    total_qty INT GENERATED ALWAYS AS (q1_qty + q2_qty + q3_qty + q4_qty) STORED,
+    total_amount NUMERIC(15, 2) GENERATED ALWAYS AS ((q1_qty + q2_qty + q3_qty + q4_qty) * unit_price) STORED,
+    preferred_depot_id VARCHAR(32) NOT NULL,
+    confidence_score NUMERIC(4, 3) -- Gemini classification confidence
+);
+
+CREATE INDEX idx_app_cse_agency_year ON app_cse_submissions(agency_id, fiscal_year);
+CREATE INDEX idx_app_cse_items_submission ON app_cse_items(submission_id);
+CREATE INDEX idx_app_cse_items_unspsc ON app_cse_items(unspsc_code);
+```
+
+### 5.5 BigQuery Analytics & Demand Forecasting Integration
+Once an APP-CSE submission reaches `SUBMITTED` status:
+*   An Eventarc event triggers a Cloud Function to stream line items into BigQuery: `mphilgeps_analytics.app_cse_consolidated_demand`.
+*   The `ARIMA_PLUS` BigQuery ML model automatically aggregates quarterly regional demand to update minimum stock levels and automated replenishment triggers for each Regional Depot.
+
 ## Verification Plan
 
 ### Automated Tests
