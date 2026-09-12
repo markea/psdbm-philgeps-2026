@@ -55,6 +55,7 @@ A cost-optimized, serverless environment deployed in Google Cloud to demonstrate
 
 #### Security & AI
 *   **Access Control:** **Identity-Aware Proxy (IAP)** to restrict access only to authorized PS-DBM demo accounts. No public internet access.
+*   **Agent Security:** **Google Cloud Model Armor** intercepts all ADK agent inputs/outputs to prevent prompt injection and redact sensitive data (DLP).
 *   **AI Integrations:** Live Vertex AI, Document AI, and ADK Agents enabled.
 
 ```mermaid
@@ -63,7 +64,8 @@ graph TD
     IAP --> CloudRun[Cloud Run: mPhilGEPS Demo Services]
     CloudRun --> CloudSQL[(Cloud SQL PostgreSQL)]
     CloudRun --> Memorystore[(Memorystore)]
-    CloudRun --> AI[Vertex AI & Gemini Enterprise]
+    CloudRun --> ModelArmor[Google Cloud Model Armor]
+    ModelArmor --> AI[Vertex AI & ADK Agents]
 ```
 
 ---
@@ -77,20 +79,28 @@ The enterprise architecture built to handle 3,500 - 5,500 daily concurrent users
 *   **API Management:** **Apigee** for secure, throttled integration with external agencies (SEC, BIR, DTI).
 *   **Data Analytics & Fraud:** **BigQuery** serving as the data warehouse for Looker dashboards and BigQuery ML forecasting.
 
-#### Security & AI
-*   **WAF & DDoS Protection:** **Cloud Load Balancing + Cloud Armor**.
+#### Security, AI & Observability
+*   **WAF & DDoS Protection:** **Cloud Load Balancing + Cloud Armor** protects the perimeter.
+*   **Agent Security (Model Armor):** All interactions with the ADK Multi-Agent System are routed through **Google Cloud Model Armor**, providing robust protection against prompt injection, jailbreaks, and ensuring sensitive PII is redacted before reaching the LLMs.
+*   **Agent Evaluation (Evals):** Implementing a continuous **Vertex AI Eval Quality Flywheel**. This framework uses LLM-as-a-judge to score ADK agent responses for groundedness, safety, and helpfulness before and after code changes.
 *   **Encryption:** **Cloud KMS** (Customer Managed Encryption Keys) for cryptographic sealing of e-Bids.
 *   **Anti-Gravity Maintenance:** PS-DBM Developers use the Anti-Gravity IDE assistant integrated directly with Gemini Enterprise to monitor, debug, and patch the GKE clusters.
+*   **Observability & Audit Trails (COA Compliance):** **Cloud Audit Logs** and **Cloud Logging** integrated via OpenTelemetry. A highly secure, append-only sink to **BigQuery** guarantees data immutability for the Commission on Audit (COA).
+*   **CI/CD Pipeline:** **Cloud Build** combined with Artifact Registry handles automated testing and zero-downtime rolling deployments to GKE.
 
 ```mermaid
 graph TD
     Public[Public Users / Merchants] --> Armor[Cloud Armor WAF + Load Balancer]
     Armor --> GKE[GKE Cluster: mPhilGEPS Prod Services]
     GKE --> AlloyDB[(AlloyDB HA)]
-    GKE --> BQ[(BigQuery: Analytics & Fraud)]
+    GKE --> BQ[(BigQuery: Immutable Audit & Analytics)]
     GKE --> Apigee[Apigee API Gateway]
     Apigee <--> Ext[External Gov Agencies]
-    GKE --> AI[Vertex AI, DocAI, ADK Agents]
+    GKE --> ModelArmor[Google Cloud Model Armor]
+    ModelArmor --> AI[Vertex AI, DocAI, ADK Agents]
+    AI -.-> Evals[Vertex AI Evals Framework]
+    GKE -.-> Obs[Cloud Logging & Monitoring]
+    CI[Cloud Build CI/CD] -.-> GKE
 ```
 
 ---
