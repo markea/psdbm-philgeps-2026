@@ -113,12 +113,17 @@ graph TD
 To provide a deeper understanding of the implementation, this section breaks down the specific microservices, database schemas, and the Multi-Agent System topology required to fulfill the BRD.
 
 ### 4.1 Microservices Architecture
-The system will be decoupled into domain-driven microservices. We recommend **Python (FastAPI)** for AI-heavy services and **Go** for high-throughput transactional services.
+To fully support the Core Functional Requirements outlined in the BRD, the system will be decoupled into the following domain-driven microservices. We recommend **Python (FastAPI)** for AI-heavy services and **Go** for high-throughput transactional services.
 
-*   **`IdentityService`:** Manages user authentication (integrating with Cloud Identity/Workspace), role-based access control (RBAC), and issues JWTs for internal service-to-service communication.
-*   **`VirtualStoreService`:** Handles the eMarketplace catalog, cart management, and order placement. Heavily utilizes Redis for caching product catalogs to ensure sub-second response times.
-*   **`BiddingService`:** Manages the lifecycle of procurement, including e-bidding, e-Reverse Auctions, and electronic bid sealing (via Cloud KMS).
-*   **`AIOrchestratorService` (Python):** The dedicated backend service hosting the Agent Development Kit (ADK). This service wraps the ADK runtime, connects to Vertex AI endpoints, and exposes gRPC/REST endpoints for the frontend to chat with the agents.
+*   **`IdentityAndAccessService`:** Manages user authentication (Cloud Identity), Role-Based Access Control (RBAC), and session JWTs.
+*   **`MerchantRegistryService` (GOP-OMR):** Handles supplier registration, Platinum Eligibility upgrades, and integrates with Document AI to automatically extract and verify business permits.
+*   **`ProcurementPlanningService`:** Manages the submission, validation, and consolidation of the Annual Procurement Plan for Common-Use Supplies and Equipment (APP-CSE) for all government agencies.
+*   **`VirtualStoreService`:** Powers the eMarketplace frontend. Handles catalog browsing, cart management, and order placement. Heavily utilizes Redis for sub-second caching.
+*   **`LogisticsAndInventoryService`:** Tracks physical stock levels across the Main, Regional, and LGU Depots. Integrates with BigQuery ML for predictive demand forecasting to prevent stockouts.
+*   **`BiddingAndAuctionService`:** Manages the entire lifecycle of procurement projects, including e-bidding, smart contracts, e-Reverse Auctions, and electronic bid sealing (via Cloud KMS).
+*   **`PaymentAndBillingService`:** Manages digital wallets, electronic payments, and integrations with external gateways (e.g., LBP e-Payment, GovPay, LDDAP-ADA).
+*   **`AIOrchestratorService`:** The dedicated Python backend hosting the Agent Development Kit (ADK) runtime, Vertex AI search grounding, and routing for all Multi-Agent interactions.
+*   **`AnalyticsAndAuditService`:** An asynchronous service responsible for funneling transactional logs into BigQuery for COA audit trails, Looker dashboards, and fraud anomaly detection.
 
 ### 4.2 Database Schema (High-Level)
 The primary relational database (PostgreSQL/AlloyDB) will be structured to enforce strict referential integrity.
