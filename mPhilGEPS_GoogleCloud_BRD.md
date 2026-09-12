@@ -55,7 +55,7 @@ To address the TOR's mandate for Artificial Intelligence, the architecture utili
 *   **Gap Addressed:** High volume of complex helpdesk queries, navigation issues, and legal clarifications regarding RA 12009.
 *   **Google AI Solution:**
     *   **Gemini Enterprise Agent Platform:** Deploy a specialized Multi-Agent System (MAS). 
-        *   *Agent 1 (Triage):* Powered by Dialogflow CX to handle deterministic routing (password resets).
+        *   *Agent 1 (Triage):* Serves as the primary orchestrator built using the Agent Development Kit (ADK). It uses LLM-based intent recognition to dynamically route users to the appropriate specialized sub-agent, bypassing the overhead of legacy conversational platforms like Dialogflow CX.
         *   *Agent 2 (Procurement Legal Expert):* Powered by the latest **Gemini Pro model**, utilizing RAG over PhilGEPS manuals and RA 12009 laws to answer complex procedural questions.
         *   *Agent 3 (Technical Support):* Assists users in navigating the APP-CSE submission portal via step-by-step interactive guidance.
 
