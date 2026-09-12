@@ -105,6 +105,52 @@ graph TD
 
 ---
 
+
+---
+
+## Detailed Subsystem Design
+
+To provide a deeper understanding of the implementation, this section breaks down the specific microservices, database schemas, and the Multi-Agent System topology required to fulfill the BRD.
+
+### 4.1 Microservices Architecture
+The system will be decoupled into domain-driven microservices. We recommend **Python (FastAPI)** for AI-heavy services and **Go** for high-throughput transactional services.
+
+*   **`IdentityService`:** Manages user authentication (integrating with Cloud Identity/Workspace), role-based access control (RBAC), and issues JWTs for internal service-to-service communication.
+*   **`VirtualStoreService`:** Handles the eMarketplace catalog, cart management, and order placement. Heavily utilizes Redis for caching product catalogs to ensure sub-second response times.
+*   **`BiddingService`:** Manages the lifecycle of procurement, including e-bidding, e-Reverse Auctions, and electronic bid sealing (via Cloud KMS).
+*   **`AIOrchestratorService` (Python):** The dedicated backend service hosting the Agent Development Kit (ADK). This service wraps the ADK runtime, connects to Vertex AI endpoints, and exposes gRPC/REST endpoints for the frontend to chat with the agents.
+
+### 4.2 Database Schema (High-Level)
+The primary relational database (PostgreSQL/AlloyDB) will be structured to enforce strict referential integrity.
+
+*   `users`: Stores PS-DBM admins, agency buyers, and COA auditors.
+*   `merchants`: Stores registered suppliers (GOP-OMR) and their eligibility status (linked to SEC/BIR integrations).
+*   `app_cse_submissions`: Stores the Annual Procurement Plans submitted by agencies, containing line items for demand forecasting.
+*   `bids`: Stores encrypted bid payloads, timestamped, with foreign keys linking back to `merchants` and specific procurement projects.
+*   `audit_ledger`: An append-only table (mirrored to BigQuery) capturing every state change to a bid or merchant status.
+
+### 4.3 Multi-Agent ADK Topology (The AI Engine)
+Instead of a monolithic chatbot or Dialogflow CX, the AI engine is a distributed, multi-agent system built on Google's ADK.
+
+```mermaid
+graph TD
+    Client[Frontend Chat UI] --> ModelArmor[Google Cloud Model Armor]
+    ModelArmor --> Triage[Triage Agent / Router]
+    
+    Triage -->|Intent: Find Products| VSAgent[Virtual Store Agent]
+    Triage -->|Intent: Procurement Rules| LegalAgent[Legal / RA 12009 Agent]
+    Triage -->|Intent: Audit & Anomalies| AuditorAgent[COA Auditor Agent]
+    
+    VSAgent --> DB[(Virtual Store Catalog / Redis)]
+    LegalAgent --> Drive[Google Drive / Vertex AI Search]
+    AuditorAgent --> BQML[BigQuery Fraud Detection]
+```
+
+*   **Triage Agent (Router):** Uses a fast model (e.g., Gemini 2.0 Flash) to instantly classify user intent and route the query to the correct specialized sub-agent.
+*   **Virtual Store Agent:** Capable of executing SQL/API calls to query the catalog (e.g., "Find me the top 3 cheapest laptops that meet these specs").
+*   **Legal / RA 12009 Agent:** Grounded in a Vertex AI Search corpus containing the full text of Republic Act 12009 and historical GPPB resolutions.
+*   **COA Auditor Agent:** Synthesizes complex anomaly detection reports from BigQuery ML into readable narratives for investigators.
+
 ## Verification Plan
 
 ### Automated Tests
