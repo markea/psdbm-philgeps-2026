@@ -53,3 +53,9 @@ def test_upload_app_cse_exceeds_budget(sample_app_cse_bytes):
     data = response.json()
     assert data["total_estimated_budget"] == 80700.00
     assert data["budget_status"] == "EXCEEDS_BUDGET"
+
+def test_portal_ui_served():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "mPhilGEPS" in response.text
+    assert "Annual Procurement Plan" in response.text

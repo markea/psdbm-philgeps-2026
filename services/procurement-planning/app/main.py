@@ -1,11 +1,14 @@
 """
 Procurement Planning Microservice.
-Provides REST endpoints for APP-CSE upload, parsing, and budget validation.
+Provides REST endpoints for APP-CSE upload, parsing, budget validation, and an interactive Web Portal.
 """
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from app.parser import parse_app_cse_excel
 from app.models import AppCseSubmissionResponse
 import uuid
+import os
 from typing import Dict
 
 app = FastAPI(
@@ -14,8 +17,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Local in-memory repository for zero-dependency development
+# In-memory store for local testing
 submissions_db: Dict[str, AppCseSubmissionResponse] = {}
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+@app.get("/")
+def get_portal_ui():
+    """Serves the interactive browser-based APP-CSE Submission Portal."""
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "Welcome to mPhilGEPS Procurement Planning Service. Visit /docs for Swagger UI."}
 
 @app.get("/health")
 def health_check():
