@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  procurement-planning:
+    build:
+      context: ./services/procurement-planning
+      dockerfile: Dockerfile
+    container_name: mphilgeps-procurement-planning
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - ENV=local
+    volumes:
+      - ./services/procurement-planning/app:/app/app:ro
