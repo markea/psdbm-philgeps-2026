@@ -298,6 +298,330 @@ Once an APP-CSE submission reaches `SUBMITTED` status:
 *   An Eventarc event triggers a Cloud Function to stream line items into BigQuery: `mphilgeps_analytics.app_cse_consolidated_demand`.
 *   The `ARIMA_PLUS` BigQuery ML model automatically aggregates quarterly regional demand to update minimum stock levels and automated replenishment triggers for each Regional Depot.
 
+
+---
+
+## 6. Subsystem Deep Dive: Virtual Store & eMarketplace
+
+The **Virtual Store** enables government agencies to purchase Common-Use Supplies and Equipment (CSE) directly from PS-DBM Main and Regional Depots with sub-second catalog responsiveness and guaranteed stock consistency.
+
+### 6.1 Architecture & Inventory Reservation Sequence
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Buyer as Agency Buyer
+    participant UI as Virtual Store UI (Next.js)
+    participant API as VirtualStoreService (Go)
+    participant Cache as Redis (Stock & Catalog)
+    participant DB as AlloyDB / Cloud SQL
+    participant Lock as Redis Distributed Lock (Redlock)
+
+    Buyer->>UI: Adds 100 boxes of A4 Paper to Cart
+    UI->>API: POST /api/v1/virtual-store/cart/items
+    API->>Lock: Acquire lock: depot-ncr:prod-44122011
+    API->>Cache: Check available depot inventory
+    alt Stock Available
+        API->>Cache: Decrement temporary reservation (TTL: 15 mins)
+        API->>DB: Upsert cart_items with expiration
+        API->>Lock: Release lock
+        API-->>UI: 200 OK (Item Added, Reserved)
+    else Insufficient Stock
+        API->>Lock: Release lock
+        API-->>UI: 409 Conflict (Stock Exhausted)
+    end
+
+    Buyer->>UI: Clicks "Checkout & Generate APR"
+    UI->>API: POST /api/v1/virtual-store/checkout
+    API->>DB: Convert Cart to Purchase Order (PO/APR)
+    API->>DB: Permanently commit inventory deduction
+    API->>Cache: Evict cached stock counts
+    API-->>UI: 201 Created (PO #PO-2026-8831 generated)
+```
+
+### 6.2 REST API Contracts (OpenAPI)
+
+#### `GET /api/v1/virtual-store/catalog`
+*   **Query Params:** `depot_id`, `category_id`, `search`, `page`, `page_size`
+*   **Response (200 OK):**
+```json
+{
+  "total": 128,
+  "page": 1,
+  "items": [
+    {
+      "product_id": "prod-44122011-01",
+      "unspsc_code": "44122011",
+      "name": "PAPER, MULTICOPY, 80gsm, size: A4",
+      "unit_of_measure": "ream",
+      "unit_price": 185.50,
+      "available_stock": 2450,
+      "depot_id": "DEPOT-NCR-MANILA",
+      "image_url": "https://storage.googleapis.com/mphilgeps-catalog/paper_a4.jpg"
+    }
+  ]
+}
+```
+
+#### `POST /api/v1/virtual-store/checkout`
+*   **Request:**
+```json
+{
+  "agency_id": "NGA-DEPED-001",
+  "depot_id": "DEPOT-NCR-MANILA",
+  "cart_id": "cart-9921-uuid",
+  "delivery_address": "DepEd Complex, Meralco Ave, Pasig City",
+  "charging_account": "WALLET-DEPED-2026"
+}
+```
+*   **Response (201 Created):**
+```json
+{
+  "purchase_order_id": "PO-2026-0912-8841",
+  "order_status": "APPROVED_PENDING_DELIVERY",
+  "total_amount": 18550.00,
+  "allocated_depot": "DEPOT-NCR-MANILA",
+  "estimated_dispatch_date": "2026-09-16T08:00:00Z"
+}
+```
+
+### 6.3 Database Schema (DDL)
+
+```sql
+CREATE TABLE products (
+    id VARCHAR(64) PRIMARY KEY,
+    unspsc_code VARCHAR(16) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    unit_of_measure VARCHAR(32) NOT NULL,
+    unit_price NUMERIC(12, 2) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE product_depot_inventory (
+    product_id VARCHAR(64) REFERENCES products(id),
+    depot_id VARCHAR(32) NOT NULL,
+    stock_on_hand INT NOT NULL DEFAULT 0,
+    reserved_stock INT NOT NULL DEFAULT 0,
+    safety_stock_level INT NOT NULL DEFAULT 100,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (product_id, depot_id)
+);
+
+CREATE TABLE purchase_orders (
+    id VARCHAR(64) PRIMARY KEY,
+    agency_id VARCHAR(64) NOT NULL REFERENCES agencies(id),
+    depot_id VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING', -- PENDING, DISPATCHED, DELIVERED, CANCELLED
+    total_amount NUMERIC(15, 2) NOT NULL,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE purchase_order_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id VARCHAR(64) NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    product_id VARCHAR(64) NOT NULL REFERENCES products(id),
+    quantity INT NOT NULL,
+    unit_price NUMERIC(12, 2) NOT NULL,
+    total_amount NUMERIC(15, 2) NOT NULL
+);
+```
+
+---
+
+## 7. Subsystem Deep Dive: GOP-OMR (Official Merchants Registry)
+
+The **GOP-OMR** enforces strict compliance with RA 12009 by automating merchant onboarding, document verification via Document AI, and live integration with regulatory agencies (SEC, BIR, DTI).
+
+### 7.1 Automated Verification Sequence
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Merchant as Prospective Supplier
+    participant UI as Merchant Portal (Next.js)
+    participant API as MerchantRegistryService (FastAPI)
+    participant GCS as Cloud Storage
+    participant DocAI as Document AI Specialized Form Parser
+    participant Apigee as Apigee Gateway
+    participant Gov as External Agency APIs (BIR/SEC)
+    participant DB as PostgreSQL / AlloyDB
+
+    Merchant->>UI: Uploads Mayor's Permit, DTI/SEC Reg, & Tax Clearance
+    UI->>API: POST /api/v1/merchants/{id}/documents
+    API->>GCS: Store encrypted documents
+    API->>DocAI: Trigger specialized form extraction
+    DocAI-->>API: Extracted fields (SEC #, Tax Validity Date, Business Name)
+    API->>Apigee: Query SEC & BIR verification endpoints
+    Apigee->>Gov: Validate business standing & TIN active status
+    Gov-->>Apigee: Valid & Active
+    Apigee-->>API: Verification Success
+    API->>DB: Record eligibility status (Status: PLATINUM_ELIGIBLE)
+    API-->>UI: Real-time verification badge: Platinum Tier Approved
+```
+
+### 7.2 Database Schema (DDL)
+
+```sql
+CREATE TABLE merchants (
+    id VARCHAR(64) PRIMARY KEY,
+    business_name VARCHAR(255) NOT NULL,
+    tin VARCHAR(32) UNIQUE NOT NULL,
+    registration_type VARCHAR(32) NOT NULL, -- DTI, SEC, CDA
+    registration_number VARCHAR(64) NOT NULL,
+    membership_tier VARCHAR(16) NOT NULL DEFAULT 'RED', -- RED, PLATINUM
+    is_blacklisted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE merchant_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    merchant_id VARCHAR(64) NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+    document_type VARCHAR(32) NOT NULL, -- MAYORS_PERMIT, TAX_CLEARANCE, SEC_CERT, AUDITED_FS
+    gcs_uri TEXT NOT NULL,
+    extracted_metadata JSONB,
+    verification_status VARCHAR(32) DEFAULT 'PENDING', -- PENDING, VERIFIED, EXPIRED, REJECTED
+    valid_until DATE,
+    verified_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_merchants_tin ON merchants(tin);
+CREATE INDEX idx_merchants_tier ON merchants(membership_tier);
+```
+
+---
+
+## 8. Subsystem Deep Dive: e-Bidding & e-Reverse Auction Engine
+
+The **e-Bidding & e-Reverse Auction Engine** provides cryptographically secure, two-envelope electronic bidding and ultra-low-latency reverse auctions with anti-sniping protection.
+
+### 8.1 Cryptographic Two-Envelope Bid Sealing Sequence
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Bidder as Qualified Merchant
+    participant UI as Bidding Portal
+    participant API as BiddingAndAuctionService (Go)
+    participant KMS as Google Cloud KMS
+    participant Storage as Cloud Storage (Sealed Bid Vault)
+    participant DB as AlloyDB / Cloud SQL
+
+    Bidder->>UI: Submits Technical & Financial Bid Packages
+    UI->>UI: Generate local AES-256 session key
+    UI->>UI: Encrypt bid payloads locally
+    UI->>API: POST /api/v1/bidding/{project_id}/submit-bid
+    API->>KMS: Wrap AES session key with Project Master Asymmetric Key
+    KMS-->>API: Wrapped key ciphertext
+    API->>Storage: Store encrypted bid package
+    API->>DB: Record bid submission metadata & timestamp
+    API-->>Bidder: Bid Submission Acknowledgment with SHA-256 Hash
+
+    Note over API,KMS: Bid Opening Phase (Requires BAC Quorum)
+    API->>KMS: BAC Quorum unlocks Project Private Key
+    API->>KMS: Unwrap AES session keys
+    API->>DB: Mark Technical Envelope as UNSEALED
+```
+
+### 8.2 Real-Time e-Reverse Auction Protocol
+*   **Transport:** WebSockets over WSS secured via Cloud Armor DDoS mitigation.
+*   **Anti-Sniping Rule:** If a lower bid is submitted within the final 2 minutes of the auction clock, the auction countdown automatically extends by an additional 2 minutes.
+*   **State Management:** High-frequency price floor cached inside **Redis Sorted Sets (`ZSET`)** for $O(\log N)$ real-time rank determination.
+
+### 8.3 Database Schema (DDL)
+
+```sql
+CREATE TABLE procurement_projects (
+    id VARCHAR(64) PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    approved_budget_for_contract NUMERIC(15, 2) NOT NULL,
+    procurement_mode VARCHAR(32) NOT NULL, -- PUBLIC_BIDDING, REVERSE_AUCTION, DIRECT_CONTRACTING
+    bid_submission_deadline TIMESTAMP WITH TIME ZONE NOT NULL,
+    bid_opening_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    kms_key_id TEXT NOT NULL,
+    status VARCHAR(32) DEFAULT 'PUBLISHED'
+);
+
+CREATE TABLE bid_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id VARCHAR(64) NOT NULL REFERENCES procurement_projects(id),
+    merchant_id VARCHAR(64) NOT NULL REFERENCES merchants(id),
+    gcs_encrypted_payload_uri TEXT NOT NULL,
+    wrapped_encryption_key TEXT NOT NULL,
+    bid_hash VARCHAR(64) NOT NULL,
+    technical_envelope_status VARCHAR(32) DEFAULT 'SEALED',
+    financial_envelope_status VARCHAR(32) DEFAULT 'SEALED',
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE auction_sessions (
+    id VARCHAR(64) PRIMARY KEY,
+    project_id VARCHAR(64) UNIQUE NOT NULL REFERENCES procurement_projects(id),
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    current_lowest_bid NUMERIC(15, 2) NOT NULL,
+    lowest_bidder_merchant_id VARCHAR(64) REFERENCES merchants(id),
+    status VARCHAR(32) DEFAULT 'SCHEDULED' -- SCHEDULED, ACTIVE, EXTENDED, CONCLUDED
+);
+```
+
+---
+
+## 9. Subsystem Deep Dive: e-Payment & Digital Wallet Integration
+
+The **PaymentAndBillingService** manages agency budget allocations, electronic payment processing (via Landbank and GovPay), and pre-funded digital wallets.
+
+### 9.1 Payment Orchestration Sequence
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Agency as Agency Disbursement Officer
+    participant UI as Payment Checkout
+    participant API as PaymentAndBillingService
+    participant DB as AlloyDB (Financial Ledger)
+    participant LBP as Landbank / GovPay Gateway
+
+    Agency->>UI: Selects Payment Mode: Agency E-Wallet
+    UI->>API: POST /api/v1/payments/checkout (with Idempotency-Key)
+    API->>DB: Check wallet balance & lock row (SELECT ... FOR UPDATE)
+    alt Balance Sufficient
+        API->>DB: Deduct wallet balance & create ledger entry
+        API->>DB: Mark order as PAID
+        API-->>UI: 200 OK (Payment Receipt Generated)
+    else Balance Insufficient
+        API->>LBP: Initiate online bank redirection (LDDAP-ADA / e-Payment)
+        LBP-->>UI: Render secure bank payment gateway
+        UI->>LBP: Authorize government disbursement
+        LBP->>API: Webhook: Payment Settled (HMAC-SHA256 signature)
+        API->>DB: Commit payment transaction
+        API-->>UI: 200 OK (Payment Confirmed via Gateway)
+    end
+```
+
+### 9.2 Database Schema (Double-Entry Financial Ledger DDL)
+
+```sql
+CREATE TABLE agency_wallets (
+    id VARCHAR(64) PRIMARY KEY,
+    agency_id VARCHAR(64) UNIQUE NOT NULL REFERENCES agencies(id),
+    current_balance NUMERIC(15, 2) NOT NULL DEFAULT 0.00 CHECK (current_balance >= 0.00),
+    currency VARCHAR(3) DEFAULT 'PHP',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE wallet_ledger (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wallet_id VARCHAR(64) NOT NULL REFERENCES agency_wallets(id),
+    transaction_type VARCHAR(16) NOT NULL, -- CREDIT, DEBIT
+    amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0.00),
+    reference_order_id VARCHAR(64),
+    idempotency_key VARCHAR(128) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_wallet_ledger_wallet ON wallet_ledger(wallet_id);
+```
+
 ## Verification Plan
 
 ### Automated Tests
