@@ -622,6 +622,48 @@ CREATE TABLE wallet_ledger (
 CREATE INDEX idx_wallet_ledger_wallet ON wallet_ledger(wallet_id);
 ```
 
+
+---
+
+## 10. Enterprise Security, Governance & Disaster Recovery
+
+Following the deep-reasoning multi-persona audit, this section hardens the infrastructure, data protection, and operational continuity across all microservices and AI modules.
+
+### 10.1 Cryptographic Quorum & Cloud KMS Key Management
+*   **Dual-Control Envelope Encryption:** The master asymmetric encryption keys for procurement projects are hosted in **Cloud KMS (FIPS 140-2 Level 3 validated Cloud HSM)**.
+*   **BAC Quorum Release:** Decrypting sealed financial envelopes requires an $M$-of-$N$ threshold cryptographic release (minimum 3 of 5 Bids and Awards Committee member electronic tokens) submitted through Secret Manager, preventing single-admin compromise.
+*   **Key Rotation:** Automatic 90-day rotation schedule for data encryption keys (DEK) and key-encrypting keys (KEK).
+
+### 10.2 Model Armor & Sensitive Data Protection (DLP)
+*   **Model Armor Filter Pipelines:** Positioned upstream of all ADK agent invocations to evaluate prompt risk scores against jailbreaks, system prompt extractions, and malicious instructions.
+*   **Cloud Data Loss Prevention (DLP):** Integrated inspection templates actively scan and mask Philippine-specific PII, including:
+    *   Tax Identification Number (`PH_TIN`)
+    *   Philippine National ID / PhilSys Card Number (`PH_PCN`)
+    *   Social Security System (`PH_SSS`) Number
+    *   Supplier bank account numbers and internal bid ceilings.
+
+### 10.3 Zero-Trust GKE Hardening & Secrets Management
+*   **Dataplane V2 Network Policies:** Strict default-deny egress and ingress between Kubernetes namespaces. The `bidding` and `payments` namespaces are isolated from direct public traffic and can only communicate with the API gateway and their dedicated database endpoints.
+*   **Secret Management:** No credentials, tokens, or private keys are baked into container images or environment variables. All secrets are stored in **Google Secret Manager** and mounted as ephemeral in-memory volumes via the **CSI Secret Store Driver**.
+
+### 10.4 10-Year Tamper-Proof Audit & Record Retention (RA 12009 / COA)
+*   **WORM Storage Policies:** All submitted procurement documents, APP-CSE plans, and awarded contracts are archived in **Cloud Storage Buckets with Bucket Lock (Object Retention in Compliance Mode)** set to a non-reversible 10-year retention duration, satisfying Commission on Audit (COA) Circulars.
+*   **Immutable BigQuery Audit Sinks:** Transactional state changes and security logs are streamed via log sinks to an append-only BigQuery dataset with column-level access controls and row hashing.
+
+### 10.5 High-Concurrency Resilience & Locking Fallbacks
+*   **Two-Tier Inventory Locking:** When high volume hits the Virtual Store, services attempt distributed locking via **Redis Redlock**. If Redis experiences network partition or node failure, the system gracefully falls back to database-level row-level pessimistic locking (`SELECT ... FOR UPDATE NOWAIT`) with exponential backoff, guaranteeing zero duplicate inventory allocation.
+*   **Financial Idempotency:** The `PaymentAndBillingService` enforces a strict unique constraint on `idempotency_key` backed by Redis and AlloyDB to eliminate double-debits during bank callback retries.
+
+### 10.6 Multi-Region Disaster Recovery & Business Continuity
+*   **Topology:** Multi-Region Active-Passive deployment:
+    *   **Primary Region:** `asia-southeast1` (Singapore)
+    *   **Disaster Recovery Region:** `asia-southeast2` (Jakarta)
+*   **Recovery Point Objective (RPO):** **< 15 minutes** achieved via continuous asynchronous replication in AlloyDB and dual-region Cloud Storage buckets.
+*   **Recovery Time Objective (RTO):** **< 1 hour** facilitated by automated Cloud DNS failover and pre-warmed standby GKE cluster manifests.
+
+### 10.7 Automated Database Migrations
+*   Database schema evolution across PostgreSQL/AlloyDB instances is strictly managed using **Liquibase / Flyway**. Migration jobs run as pre-sync Kubernetes init containers or Cloud Build pipeline steps prior to rolling application deployments, ensuring backward and forward schema compatibility.
+
 ## Verification Plan
 
 ### Automated Tests

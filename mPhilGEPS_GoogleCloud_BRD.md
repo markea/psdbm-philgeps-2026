@@ -150,13 +150,15 @@ graph TD
 ## 8. Non-Functional & Service Level Requirements (SLA)
 
 *   **Security & Compliance:**
-    *   **Agent Security (Model Armor):** All incoming prompts and outgoing AI responses must be intercepted by **Google Cloud Model Armor** to prevent jailbreaks, prompt injection, and redact sensitive PII (DLP).
-    *   **Encryption:** **Cloud Key Management Service (KMS)** handles encryption keys for data at rest and in transit. Bid boxes are cryptographically sealed until bid opening.
+    *   **Agent Security & DLP (Model Armor):** All incoming prompts and outgoing AI responses must be intercepted by **Google Cloud Model Armor** to prevent jailbreaks and prompt injections. Integrates with **Cloud DLP** to inspect and redact Philippine-specific PII (TIN, PhilSys PCN, SSS).
+    *   **Encryption & Quorum Unsealing:** **Cloud Key Management Service (KMS) with Cloud HSM** (FIPS 140-2 Level 3). Bid boxes are cryptographically sealed and require an M-of-N quorum of Bids and Awards Committee (BAC) member keys to unseal.
+    *   **10-Year Tamper-Proof WORM Storage:** Archival of submitted bids and APP-CSE records in **Cloud Storage with Bucket Lock in Compliance Mode** (10-year retention) complying with COA Circulars and RA 12009.
     *   **WAF & DDoS Protection:** **Google Cloud Armor** protects against OWASP Top 10 vulnerabilities, brute-force attacks, and massive DDoS attempts (as mandated in Annex F & G).
     *   **Immutable Audit Trail:** All sensitive transactions and system logs (routed via OpenTelemetry) must sink to an append-only **BigQuery** dataset to ensure data immutability for Commission on Audit (COA) compliance.
-*   **High Availability & Capacity (Annex C & D):**
+*   **High Availability, Disaster Recovery & Capacity (Annex C & D):**
     *   **Target Load:** Architecture must support peak concurrent users of 3,500 - 5,500 daily.
-    *   **Uptime SLA:** 99.9% uptime (24x7 operation) utilizing a multi-region Active-Passive or Active-Active deployment model.
+    *   **Uptime SLA:** 99.9% uptime (24x7 operation) utilizing a multi-region Active-Passive deployment (`asia-southeast1` primary, `asia-southeast2` secondary).
+    *   **Disaster Recovery Metrics:** **RPO < 15 minutes** and **RTO < 1 hour** with automated health checks and Cloud DNS failover.
     *   **Performance:** Full page display (including CSS/JS payloads) guaranteed within 5 seconds during peak loads, heavily leveraging Cloud CDN and Memorystore.
 *   **Data Standards (OCDS / Open Data):**
     *   Expose public datasets for Civil Society Organizations (CSOs) natively outputting JSON, CSV, and XML via BigQuery data sharing and Looker embedded analytics.
