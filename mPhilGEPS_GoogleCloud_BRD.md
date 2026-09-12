@@ -92,7 +92,28 @@ To address the TOR's mandate for Artificial Intelligence, the architecture utili
 
 ---
 
-## 6. High-Level Architecture Diagram
+
+---
+
+## 6. Gemini Enterprise Standard SKU & System Maintenance
+
+To support the TOR’s stringent requirements for a 3-year maintenance cycle, 24/7 SLA, and strict data governance, the architecture leverages the **Gemini Enterprise Standard SKU** across operational and developer workflows.
+
+### 6.1 Multi-Agent Frontend & Orchestration
+*   **Ready-to-Use Secure Frontend:** Gemini Enterprise serves as the out-of-the-box, enterprise-grade chat frontend for internal stakeholders (PS-DBM admins, BAC members, COA auditors). Instead of building custom UI interfaces for the Multi-Agent System (MAS), personnel can interface with specialized sub-agents directly through the familiar GE interface.
+
+### 6.2 Native Productivity & Collaboration (Workspace Integration)
+*   **Automating Procurement Tasks:** By leveraging GE inside Google Workspace, procurement officers can natively draft Terms of Reference (TORs) in Docs, automatically extract and compare bidder pricing matrices in Sheets, and use GE to transcribe and summarize pre-bid conferences directly from Google Meet.
+*   **Drive Grounding (RAG):** GE securely grounds the multi-agent system into the agency’s internal Google Drive. Agents can instantly query historical contracts or blacklisted supplier lists without requiring complex external vector databases.
+
+### 6.3 Advanced Development & Maintenance (Anti-Gravity)
+*   **Bundled Agentic IDE Support:** Included with the Gemini Enterprise Standard SKU, **Anti-Gravity** serves as the deeply integrated, agentic AI coding assistant inside the PS-DBM engineering team's IDE.
+*   **Autonomous Maintenance:** Anti-Gravity autonomously assists developers in refactoring legacy code, rapidly debugging GKE microservices, generating complex `Cloud Spanner` queries, and executing large-scale system updates securely, ensuring the 99.9% uptime SLA is met.
+
+### 6.4 Strict Data Sovereignty & Governance
+*   **Compliance with RA 12009 & Privacy Laws:** GE provides the critical enterprise guarantee that highly sensitive government procurement data, prompts, and submitted bid documents are **never** used to train Google’s foundational models, maintaining absolute data privacy and security.
+
+## 7. High-Level Architecture Diagram
 
 ```mermaid
 graph TD
@@ -121,7 +142,7 @@ graph TD
 
 ---
 
-## 7. Non-Functional & Service Level Requirements (SLA)
+## 8. Non-Functional & Service Level Requirements (SLA)
 
 *   **Security & Compliance:**
     *   **Encryption:** **Cloud Key Management Service (KMS)** handles encryption keys for data at rest and in transit. Bid boxes are cryptographically sealed until bid opening.
@@ -136,7 +157,7 @@ graph TD
 
 ---
 
-## 8. Implementation Phasing Strategy
+## 9. Implementation Phasing Strategy
 
 1.  **Phase 1: Inception & Prototyping (Months 1-3):** Finalize infrastructure foundation on GCP. Develop rapid prototypes of the Multi-Agent Chatbot for the Virtual Store and Document AI pipelines for GOP-OMR.
 2.  **Phase 2: Core Modernization (Months 4-12):** Build the GKE microservices for the eMarketplace, Virtual Store, and APP-CSE submission portals. Establish Apigee API tunnels to BIR/SEC.
