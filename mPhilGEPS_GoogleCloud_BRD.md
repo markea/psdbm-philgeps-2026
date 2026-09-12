@@ -128,16 +128,21 @@ graph TD
     mPhilGEPS --> Cache[(Memorystore)]
     mPhilGEPS --> Storage[Cloud Storage: Docs & Attachments]
     
-    mPhilGEPS --> AI_Gateway[Vertex AI & Gemini API]
+    mPhilGEPS --> ModelArmor[Google Cloud Model Armor]
+    ModelArmor --> AI_Gateway[Vertex AI & Gemini API]
     AI_Gateway --> DocAI[Document AI: Extraction]
     AI_Gateway --> Gemini[Latest Gemini Pro: Insights & Matching]
     AI_Gateway --> Agent[Multi-Agent System: Triage, Legal, Audit]
+    AI_Gateway -.-> Evals[Vertex AI Evals Framework]
     
-    mPhilGEPS --> BQ[(BigQuery: Central Data Warehouse)]
+    mPhilGEPS --> BQ[(BigQuery: Central Data Warehouse & Immutable Audit)]
     BQ --> BQML[BigQuery ML: Demand Forecasting & Fraud Detection]
     BQ --> Looker[Looker: Dashboards & OCDS Public Data]
     
     API <--> External[External Gov APIs: SEC, BIR, DTI]
+    
+    mPhilGEPS -.-> Obs[Cloud Logging & Monitoring]
+    CI[Cloud Build CI/CD] -.-> mPhilGEPS
 ```
 
 ---
@@ -145,15 +150,21 @@ graph TD
 ## 8. Non-Functional & Service Level Requirements (SLA)
 
 *   **Security & Compliance:**
+    *   **Agent Security (Model Armor):** All incoming prompts and outgoing AI responses must be intercepted by **Google Cloud Model Armor** to prevent jailbreaks, prompt injection, and redact sensitive PII (DLP).
     *   **Encryption:** **Cloud Key Management Service (KMS)** handles encryption keys for data at rest and in transit. Bid boxes are cryptographically sealed until bid opening.
     *   **WAF & DDoS Protection:** **Google Cloud Armor** protects against OWASP Top 10 vulnerabilities, brute-force attacks, and massive DDoS attempts (as mandated in Annex F & G).
-    *   **Audit Trail:** Immutable audit logging of all sensitive transactions routed to **Cloud Logging** and **BigQuery**.
+    *   **Immutable Audit Trail:** All sensitive transactions and system logs (routed via OpenTelemetry) must sink to an append-only **BigQuery** dataset to ensure data immutability for Commission on Audit (COA) compliance.
 *   **High Availability & Capacity (Annex C & D):**
     *   **Target Load:** Architecture must support peak concurrent users of 3,500 - 5,500 daily.
     *   **Uptime SLA:** 99.9% uptime (24x7 operation) utilizing a multi-region Active-Passive or Active-Active deployment model.
     *   **Performance:** Full page display (including CSS/JS payloads) guaranteed within 5 seconds during peak loads, heavily leveraging Cloud CDN and Memorystore.
 *   **Data Standards (OCDS / Open Data):**
     *   Expose public datasets for Civil Society Organizations (CSOs) natively outputting JSON, CSV, and XML via BigQuery data sharing and Looker embedded analytics.
+*   **AI Quality & Governance:**
+    *   **Agent Evaluation (Evals):** Employ the **Vertex AI Eval Quality Flywheel** (LLM-as-a-judge) to continuously measure ADK agent responses for groundedness, safety, and helpfulness to prevent hallucinations and maintain trust.
+*   **Operations & Deployment:**
+    *   **CI/CD Pipeline:** Fully automated deployments using **Cloud Build** and Artifact Registry to ensure zero-downtime rolling updates to GKE clusters.
+    *   **Observability:** End-to-end tracing and monitoring via **Cloud Monitoring, Cloud Logging, and OpenTelemetry**.
 
 ---
 
