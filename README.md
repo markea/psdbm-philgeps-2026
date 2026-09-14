@@ -1,18 +1,19 @@
-# Modernized Philippine Government Electronic Procurement System (mPhilGEPS)
+# Modernized Philippine Government Electronic Procurement System (mPhilGEPS) Phase 2
 
-[![Architecture](https://img.shields.io/badge/Architecture-Google_Cloud-4285F4?logo=googlecloud&logoColor=white)](./mPhilGEPS_GoogleCloud_TDD.md)
-[![AI Stack](https://img.shields.io/badge/AI-Gemini_%26_Vertex_AI-8E75B2?logo=google&logoColor=white)](./mPhilGEPS_GoogleCloud_BRD.md)
+[![Architecture](https://img.shields.io/badge/Architecture-Google_Cloud_%26_Spanner_Graph-4285F4?logo=googlecloud&logoColor=white)](./mPhilGEPS_GoogleCloud_TDD.md)
+[![AI Stack](https://img.shields.io/badge/AI-Gemini_3.1_Pro_%26_3.7_Flash-8E75B2?logo=google&logoColor=white)](./mPhilGEPS_GoogleCloud_BRD.md)
 [![Status](https://img.shields.io/badge/Status-Phase_1:_Localhost-success)](./mPhilGEPS_Implementation_Plan.md)
 
-Modernized electronic procurement platform for the Republic of the Philippines (Procurement Service - Department of Budget and Management / PS-DBM), designed to comply with the **New Government Procurement Act (RA 12009)**.
+Modernized electronic procurement platform for the Republic of the Philippines (Procurement Service - Department of Budget and Management / PS-DBM), designed to comply with the **New Government Procurement Act (RA 12009 / NGPA)** and the **Data Privacy Act (RA 10173)**.
 
 ---
 
 ## 📚 Architectural & Delivery Documentation
 
-*   📄 **[Business Requirements Document (BRD)](./mPhilGEPS_GoogleCloud_BRD.md):** Detailed mapping of procurement workflows, legal mandates, and AI requirements to the Google Cloud stack.
-*   📄 **[Technical Design Document (TDD)](./mPhilGEPS_GoogleCloud_TDD.md):** Engineering blueprint detailing microservices, database schemas, Model Armor, and progressive deployment paths (Localhost $\rightarrow$ GCP Demo $\rightarrow$ Production GKE).
+*   📄 **[Business Requirements Document (BRD)](./mPhilGEPS_GoogleCloud_BRD.md):** Detailed mapping of procurement workflows, legal mandates, and next-generation AI requirements to the Google Cloud stack.
+*   📄 **[Technical Design Document (TDD)](./mPhilGEPS_GoogleCloud_TDD.md):** Engineering blueprint detailing in-database AI processing (Spanner Graph & BigQuery ML), dual-pass UNSPSC classification, Document AI verification matrix, Confidential Space Bid Vault, and progressive deployment paths (Localhost $\rightarrow$ GCP Demo $\rightarrow$ Production GKE).
 *   📄 **[Master Implementation & Delivery Plan](./mPhilGEPS_Implementation_Plan.md):** Phased execution roadmap, Work Breakdown Structure (WBS), risk registry, and environment promotion matrix.
+*   📄 **[PS-DBM Gemini Requirements Architecture v1.0](./PS-DBM%20-%20Gemini%20Reqs%20-%20v1.0.pdf):** Foundational architectural specifications and Terms of Reference (TOR) analysis.
 
 ---
 
@@ -88,6 +89,7 @@ cd services/procurement-planning
 
 ```
 psdbm-philgeps-2026/
+├── PS-DBM - Gemini Reqs - v1.0.pdf       # Core architecture specifications
 ├── mPhilGEPS_GoogleCloud_BRD.md          # Business Requirements Document
 ├── mPhilGEPS_GoogleCloud_TDD.md          # Technical Design Document
 ├── mPhilGEPS_Implementation_Plan.md      # Master Implementation & Delivery Plan
