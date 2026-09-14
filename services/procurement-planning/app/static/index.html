@@ -10,7 +10,15 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen">
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
+    <!-- Global Demo Warning Banner -->
+    <div class="bg-amber-500 text-slate-950 px-4 py-2 text-center text-xs sm:text-sm font-bold tracking-wide flex items-center justify-center space-x-2 shadow-inner">
+        <svg class="w-5 h-5 text-slate-950 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        <span>⚠️ DEMO ENVIRONMENT ONLY &mdash; This is an unauthenticated public prototype instance for demonstration purposes. Not for official government procurement filings.</span>
+    </div>
+
     <!-- Navbar -->
     <header class="bg-blue-900 text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -24,9 +32,9 @@
                 </div>
             </div>
             <div class="flex items-center space-x-4">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-800 text-blue-100 border border-blue-700">
-                    <span class="w-2 h-2 mr-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                    Localhost Environment
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-400 text-slate-950 border border-amber-300 shadow-sm">
+                    <span class="w-2 h-2 mr-1.5 bg-amber-900 rounded-full animate-ping"></span>
+                    PUBLIC DEMO TIER
                 </span>
                 <a href="/docs" target="_blank" class="text-xs text-blue-200 hover:text-white underline">API Docs (Swagger)</a>
             </div>
@@ -34,9 +42,12 @@
     </header>
 
     <!-- Main Container -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <!-- Banner -->
         <div class="mb-8">
+            <div class="inline-flex items-center space-x-1 text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full mb-2 uppercase tracking-wide">
+                <span>⚡ Sandbox / Demo Prototype</span>
+            </div>
             <h2 class="text-2xl font-bold text-slate-800">Annual Procurement Plan (APP-CSE) Submission Portal</h2>
             <p class="text-sm text-slate-600 mt-1">Upload your agency's 2026 APP-CSE spreadsheet to automatically extract line items, classify UNSPSC codes, and validate budget allocations.</p>
         </div>
@@ -210,6 +221,13 @@
             </div>
         </div>
     </main>
+
+    <footer class="mt-auto py-6 bg-slate-100 border-t border-slate-200 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p class="font-semibold text-slate-700">mPhilGEPS Phase 2 Demonstration Prototype &bull; Google Cloud Run</p>
+            <p class="text-amber-800 font-medium mt-1">⚠️ Public Sandbox Notice: This environment is unauthenticated and open for stakeholder testing. Data is transient.</p>
+        </div>
+    </footer>
 
     <script>
         const dropZone = document.getElementById('dropZone');
