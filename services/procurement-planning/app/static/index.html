@@ -456,31 +456,26 @@
             if (chatForm) {
                 chatForm.addEventListener('submit', (e) => {
                     e.preventDefault();
-                    if (!chatInput) return;
-                    const text = chatInput.value.trim();
-                    if(!text) return;
-                    
-                    addMessage(text, 'user');
-                    chatInput.value = '';
-                    
-                    // Mock Gemini Response
-                    setTimeout(() => {
-                        let response = "I am an AI assistant deployed on the GCP Cloud Run widget. ";
-                        if (currentAgent === 'bac') {
-                            if (text.toLowerCase().includes("budget") || text.toLowerCase().includes("exceed")) {
-                                response = "Based on **RA 12009 Section 7.2**, no procurement shall be undertaken unless it is in accordance with the approved APP-CSE. If your upload exceeds your allocated ceiling, you must submit a Supplemental APP.";
-                            } else if (text.toLowerCase().includes("unspsc")) {
-                                response = "Our Dual-Pass pipeline automatically normalizes your raw descriptions into formal UNSPSC hierarchy elements (Segment > Family > Class > Commodity).";
-                            } else {
-                                response = "I can cross-reference that with the GPPB Guidelines and the NGPA rules. Would you like me to pull the specific clause?";
-                            }
-                        } else if (currentAgent === 'coa') {
-                            response = "I will queue a **BigQuery ML / Spanner Graph** query to analyze those line items for Benford's law pricing anomalies. Let me know if you want the OCDS export!";
-                        } else {
-                            response = "To bid on this, your Audited Financial Statement from the BIR needs to show an **NFCC** greater than the ABC. Upload your Document AI scanned AFS when ready!";
-                        }
-                        addMessage(response, 'agent', agentGreetings[currentAgent]);
-                    }, 800);
+                if (!chatInput) return;
+                const text = chatInput.value.trim();
+                if(!text) return;
+                
+                addMessage(text, 'user');
+                chatInput.value = '';
+                
+                // Fetch from the Backend Agent RPC
+                fetch('/api/v1/agent/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: currentAgent, message: text })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    addMessage(data.reply, 'agent', agentGreetings[currentAgent]);
+                })
+                .catch(err => {
+                    addMessage("Error connecting to Agent Hub.", 'agent', agentGreetings[currentAgent]);
+                });
                 });
             }
 

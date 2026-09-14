@@ -1,0 +1,32 @@
+[
+  {
+    "query": "What if our APP-CSE exceeds the allocated budget ceiling?",
+    "agent_id": "bac",
+    "golden_keywords": ["RA 12009", "Section 7.2", "Supplemental APP"]
+  },
+  {
+    "query": "How is UNSPSC normalization handled?",
+    "agent_id": "bac",
+    "golden_keywords": ["Dual-Pass", "Segment", "Family", "Class", "Commodity", "hierarchy"]
+  },
+  {
+    "query": "Are there pricing anomalies detected?",
+    "agent_id": "coa",
+    "golden_keywords": ["BigQuery ML", "Spanner Graph", "Benford's law"]
+  },
+  {
+    "query": "How can I export audit data?",
+    "agent_id": "coa",
+    "golden_keywords": ["OCDS", "Open Contracting Data Standard"]
+  },
+  {
+    "query": "What do I need for Platinum GOP-OMR registration?",
+    "agent_id": "merchant",
+    "golden_keywords": ["SEC GIS", "DTI", "BIR Tax Clearance", "PCAB", "60/40 Filipino"]
+  },
+  {
+    "query": "How do you evaluate if I can bid on a project?",
+    "agent_id": "merchant",
+    "golden_keywords": ["NFCC", "greater than the ABC", "Document AI", "AFS"]
+  }
+]
