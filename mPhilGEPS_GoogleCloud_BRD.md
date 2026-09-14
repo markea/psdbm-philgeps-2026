@@ -172,7 +172,10 @@ graph TD
 ---
 
 ### 5.4 Multi-Agent Conversational Ecosystem (Google Antigravity & Agent Builder)
-*   **Gap Addressed:** Monolithic chatbots fail to handle complex legal inquiries, tender navigation, and audit synthesis.
+*   **Gap Addressed:** Monolithic chatbots fail to handle complex legal inquiries, tender navigation, and audit synthesis across both internal government personnel and external public suppliers.
+*   **Dual-Channel Frontend Deployment Flexibility:**
+    *   **Channel 1: Gemini Enterprise (Internal Personnel):** Out-of-the-box, enterprise-grade conversational frontend for PS-DBM admins, BAC members, and COA auditors. No custom UI development required; internal stakeholders can interact with the specialized agents directly through Gemini Enterprise web and side-panel extensions inside Google Workspace (Docs, Sheets, Drive).
+    *   **Channel 2: Cloud Run (External / Public Portal UI):** Highly scalable, serverless web/mobile chat UI and embeddable web widget deployed on **Cloud Run** for unauthenticated or authenticated external users (merchants, prospective bidders, civil society observers). Scalable to zero when idle, burstable to 5,500+ concurrent sessions during bid-closing surges, and shielded by Cloud Armor WAF and Apigee.
 *   **Multi-Agent Topology:**
     *   **Supervisor Agent (Intent Classifier & Router):** Built on Agent Development Kit (ADK) and Gemini 3.7 Flash. Routes user sessions with sub-second latency across specialized agents.
     *   **Merchant Onboarding & Bidding Agent:** Contextually guides prospective bidders through technical and financial package assembly. Executes real-time pre-flight checks (*"Your Omnibus Sworn Statement is missing Annex A"*).

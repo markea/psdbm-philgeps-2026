@@ -108,10 +108,27 @@ graph TD
 
 ### 4.2 Multi-Agent Conversational Ecosystem (Antigravity & Agent Builder Hub)
 
+#### Dual-Channel Frontend Deployment Architecture
+The multi-agent ecosystem maintains full flexibility to support two concurrent frontend delivery models:
+1.  **Gemini Enterprise Frontend (Internal Government Stakeholders):**
+    *   **Audience:** PS-DBM Administrators, BAC Members, Secretariat, and COA Auditors.
+    *   **Deployment:** Out-of-the-box Gemini Enterprise conversational UI and Google Workspace side-panel integration (Docs, Sheets, Drive).
+    *   **Benefits:** Zero frontend engineering overhead, native Workspace identity integration, and direct document grounding without custom UI maintenance.
+2.  **Cloud Run Containerized Frontend (Public & Merchant Multi-Channel Portal):**
+    *   **Audience:** Registered and prospective suppliers (GOP-OMR), public observers, and citizen monitors.
+    *   **Deployment:** Lightweight, responsive Next.js/React chat interface and embeddable web widget deployed as a serverless container on **Cloud Run**.
+    *   **Benefits:** Highly cost-efficient (scales to zero when idle), seamlessly absorbs massive traffic spikes exceeding 5,500+ concurrent sessions during bid deadlines, and is securely perimeter-protected by Google Cloud Armor WAF and Apigee.
+
 ```mermaid
 graph TD
-    UserChat[Frontend Chat UI / Gemini Enterprise Workspace] --> Armor[Model Armor & DLP Filter]
-    Armor --> Supervisor[Supervisor Agent: Intent Classifier & Router<br/>Powered by Gemini 3.7 Flash]
+    InternalUsers[Internal: BAC / PS-DBM / COA] -->|Native SSO| GE_UI[Gemini Enterprise Workspace UI]
+    ExternalUsers[External: Merchants / Citizens] -->|HTTPS / WSS| CloudRun_UI[Cloud Run: Multi-Channel Web Widget]
+    
+    GE_UI --> ModelArmor[Google Cloud Model Armor & DLP Filter]
+    CloudRun_UI --> CloudArmor[Cloud Armor WAF & Apigee]
+    CloudArmor --> ModelArmor
+    
+    ModelArmor --> Supervisor[Supervisor Agent: Intent Classifier & Router<br/>Powered by Gemini 3.7 Flash]
     
     Supervisor -->|Merchant Guidance & Pre-Flight| BiddingAgent[Merchant Onboarding & Bidding Agent]
     Supervisor -->|Procurement Rules & IRR| BACAgent[BAC Advisor Agent<br/>Grounded via OKF]
