@@ -49,7 +49,12 @@ The **APP-CSE (Annual Procurement Plan - Common-Use Supplies and Equipment)** se
    * Drag and drop this file into the web portal upload area and click **"Process & Validate APP-CSE"**.
    * Inspect the extracted line items, UNSPSC classifications, and budget ceiling validation badge.
 
-5. **Interactive Swagger API Documentation:**
+5. **Test the Multi-Agent Hub POC:**
+   * This is the **first incremental version of the initial POC** demonstrating the Multi-Agent Conversational Ecosystem (BRD §5.4).
+   * Click the glowing `✨` (Agent Hub) button in the bottom right corner of the web portal.
+   * Toggle between the specialised agents (BAC Advisor, COA Auditor, Merchant Help) and test the interactive chat mockups anchored in RA 12009 policy logic.
+
+6. **Interactive Swagger API Documentation:**
    * Visit **[http://localhost:8001/docs](http://localhost:8001/docs)** to test the REST API directly.
 
 ---
