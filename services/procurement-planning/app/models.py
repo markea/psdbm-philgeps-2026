@@ -45,3 +45,10 @@ class AppCseSubmissionResponse(BaseModel):
     items: List[AppCseItem]
     bigquery_demand_stream: List[BigQueryDemandRecord] = []
     validation_errors: List[str] = []
+
+class AgentMultiHubRequest(BaseModel):
+    agent_id: str = Field(description="The ID of the specialized agent (e.g., 'bac', 'coa', 'merchant')")
+    message: str = Field(description="The natural language query from the user")
+
+class AgentMultiHubResponse(BaseModel):
+    reply: str = Field(description="The generated response from the agent")
