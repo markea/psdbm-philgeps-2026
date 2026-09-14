@@ -160,18 +160,36 @@
                     <!-- Items Table -->
                     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                         <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-                            <h4 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Extracted Line Items</h4>
-                            <button id="downloadJsonBtn" class="text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-colors">
-                                Download Normalized JSON
-                            </button>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Extracted Line Items</h4>
+                                <p class="text-[11px] text-slate-500">Dual-pass semantic normalization & UNSPSC 4-tier hierarchical enforcement</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button id="viewBqBtn" class="text-xs font-semibold text-emerald-700 hover:text-emerald-900 border border-emerald-300 hover:border-emerald-400 bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1">
+                                    <span>BigQuery ML Stream Payload</span>
+                                </button>
+                                <button id="downloadJsonBtn" class="text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition-colors">
+                                    Download Normalized JSON
+                                </button>
+                            </div>
                         </div>
+
+                        <!-- BigQuery Modal / Drawer -->
+                        <div id="bqModal" class="hidden p-4 bg-slate-900 text-slate-100 border-b border-slate-700 text-xs font-mono max-h-60 overflow-y-auto">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-emerald-400">Target Table: mphilgeps_analytics.app_demand_forecast (holiday_region='PH')</span>
+                                <button id="closeBqBtn" class="text-slate-400 hover:text-white">&times; Close</button>
+                            </div>
+                            <pre id="bqPayloadCode" class="text-[11px] whitespace-pre-wrap"></pre>
+                        </div>
+
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-xs text-slate-700">
                                 <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
                                     <tr>
                                         <th class="px-4 py-3">Code</th>
-                                        <th class="px-4 py-3">UNSPSC</th>
-                                        <th class="px-4 py-3">Description</th>
+                                        <th class="px-4 py-3">UNSPSC & Hierarchy</th>
+                                        <th class="px-4 py-3">Description & Normalized Title</th>
                                         <th class="px-3 py-3">UOM</th>
                                         <th class="px-3 py-3 text-right">Unit Price</th>
                                         <th class="px-2 py-3 text-center">Q1</th>
@@ -311,11 +329,31 @@
                 <tr class="hover:bg-slate-50 transition-colors">
                     <td class="px-4 py-2.5 font-mono text-slate-500">${item.item_code || '-'}</td>
                     <td class="px-4 py-2.5">
-                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                            ${item.unspsc_code}
-                        </span>
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                    ${item.unspsc_code}
+                                </span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    ${(item.confidence_score * 100).toFixed(1)}% conf
+                                </span>
+                            </div>
+                            ${item.hierarchy ? `
+                                <div class="text-[10px] text-slate-500 leading-tight">
+                                    <span class="font-semibold text-slate-600">${item.hierarchy.family || ''}</span> &rarr; ${item.hierarchy.commodity || ''}
+                                </div>
+                            ` : ''}
+                        </div>
                     </td>
-                    <td class="px-4 py-2.5 font-medium text-slate-800 max-w-xs truncate" title="${item.description}">${item.description}</td>
+                    <td class="px-4 py-2.5">
+                        <div class="font-medium text-slate-800" title="${item.description}">${item.description}</div>
+                        ${item.standardized_description ? `
+                            <div class="text-[11px] text-blue-700 flex items-center space-x-1 mt-0.5">
+                                <span class="font-semibold">✨ Normalized:</span>
+                                <span>${item.standardized_description}</span>
+                            </div>
+                        ` : ''}
+                    </td>
                     <td class="px-3 py-2.5 text-slate-500">${item.unit_of_measure}</td>
                     <td class="px-3 py-2.5 text-right font-mono text-slate-600">₱${item.unit_price.toFixed(2)}</td>
                     <td class="px-2 py-2.5 text-center text-slate-500">${item.q1_qty}</td>
@@ -326,6 +364,24 @@
                     <td class="px-4 py-2.5 text-right font-mono font-bold text-slate-900">₱${item.total_amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                 </tr>
             `).join('');
+
+            // BigQuery preview setup
+            const bqModal = document.getElementById('bqModal');
+            const bqPayloadCode = document.getElementById('bqPayloadCode');
+            const viewBqBtn = document.getElementById('viewBqBtn');
+            const closeBqBtn = document.getElementById('closeBqBtn');
+
+            if (data.bigquery_demand_stream) {
+                bqPayloadCode.textContent = JSON.stringify({
+                    target_table: "mphilgeps_analytics.app_demand_forecast",
+                    holiday_region: "PH",
+                    total_records: data.bigquery_demand_stream.length,
+                    sample_records: data.bigquery_demand_stream.slice(0, 5)
+                }, null, 2);
+            }
+
+            viewBqBtn.onclick = () => bqModal.classList.toggle('hidden');
+            closeBqBtn.onclick = () => bqModal.classList.add('hidden');
 
             resultsContainer.classList.remove('hidden');
         }

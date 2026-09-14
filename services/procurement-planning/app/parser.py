@@ -6,7 +6,7 @@ import openpyxl
 from io import BytesIO
 from typing import List, Tuple
 from app.models import AppCseItem
-from app.classifier import classify_item_unspsc
+from app.classifier import classify_item_dual_pass, classify_item_unspsc
 
 def parse_app_cse_excel(file_bytes: bytes) -> Tuple[List[AppCseItem], List[str]]:
     """
@@ -111,12 +111,16 @@ def parse_app_cse_excel(file_bytes: bytes) -> Tuple[List[AppCseItem], List[str]]
                 if reported_qty > 0 and reported_qty != calculated_qty:
                     errors.append(f"Row {row_idx} ({raw_desc}): Reported Total Qty ({reported_qty}) does not match sum of quarters ({calculated_qty})")
 
-            unspsc = classify_item_unspsc(raw_desc, item_code)
+            unspsc_code, hierarchy, confidence, std_desc, specs = classify_item_dual_pass(raw_desc, item_code)
 
             item = AppCseItem(
                 item_code=item_code,
-                unspsc_code=unspsc,
+                unspsc_code=unspsc_code,
+                hierarchy=hierarchy,
+                confidence_score=confidence,
                 description=raw_desc,
+                standardized_description=std_desc,
+                extracted_specifications=specs if specs else None,
                 unit_of_measure=uom,
                 unit_price=unit_price,
                 q1_qty=q1,

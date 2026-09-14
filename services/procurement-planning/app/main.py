@@ -56,6 +56,17 @@ async def upload_app_cse(
 
     submission_id = f"cse-{fiscal_year}-{uuid.uuid4().hex[:8]}"
     
+    # Generate BigQuery ML in-database demand stream records (TDD §5.2)
+    bq_records = [
+        {
+            "procurement_date": f"{fiscal_year}-01-15",
+            "unspsc_commodity_code": item.unspsc_code,
+            "total_expenditure": item.total_amount,
+            "holiday_region": "PH"
+        }
+        for item in items
+    ]
+
     response = AppCseSubmissionResponse(
         submission_id=submission_id,
         agency_id=agency_id,
@@ -66,6 +77,7 @@ async def upload_app_cse(
         allocated_budget=allocated_budget,
         budget_status=budget_status,
         items=items,
+        bigquery_demand_stream=bq_records,
         validation_errors=errors
     )
     
@@ -77,3 +89,20 @@ def get_submission(submission_id: str):
     if submission_id not in submissions_db:
         raise HTTPException(status_code=404, detail=f"Submission '{submission_id}' not found.")
     return submissions_db[submission_id]
+
+@app.get("/api/v1/app-cse/{submission_id}/bigquery-stream")
+def get_bigquery_demand_stream(submission_id: str):
+    """
+    Returns the BigQuery ML ARIMA_PLUS streaming records for this submission,
+    formatted for mphilgeps_analytics.app_demand_forecast with holiday_region = 'PH'.
+    """
+    if submission_id not in submissions_db:
+        raise HTTPException(status_code=404, detail=f"Submission '{submission_id}' not found.")
+    sub = submissions_db[submission_id]
+    return {
+        "submission_id": sub.submission_id,
+        "target_table": "mphilgeps_analytics.app_demand_forecast",
+        "holiday_region": "PH",
+        "stream_records_count": len(sub.bigquery_demand_stream),
+        "records": sub.bigquery_demand_stream
+    }
