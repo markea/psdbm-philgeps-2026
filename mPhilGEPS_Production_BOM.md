@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary & Cost Architecture
 
-This production-grade Bill of Materials (BOM) provides the comprehensive financial model and operational sizing for the **Modernized Philippine Government Electronic Procurement System (mPhilGEPS Phase 2)**, in direct response to the requirements outlined in the Terms of Reference (TOR), the Business Requirements Document (BRD), and the Technical Design Document (TDD).
+This production-grade Bill of Materials (BOM) provides the comprehensive financial model, operational sizing, and business continuity architecture for the **Modernized Philippine Government Electronic Procurement System (mPhilGEPS Phase 2)**, in direct response to the requirements outlined in the Terms of Reference (TOR), the Business Requirements Document (BRD), and the Technical Design Document (TDD).
 
 ### Financial Synthesis
 
@@ -48,21 +48,77 @@ This production-grade Bill of Materials (BOM) provides the comprehensive financi
 
 ---
 
-## 2. Workload Sizing & Operational Baseline
+## 2. Workload Sizing, User Concurrency & Traffic Spike Analysis
 
-The Bill of Materials is engineered against the following production concurrency and throughput parameters defined in the TOR:
+### 2.1 User Base Breakdown: Registered vs. Active vs. Concurrent
 
-| Architectural Metric | Baseline Specification | Sizing & Throughput Rationale |
-| :--- | :--- | :--- |
-| **Active Concurrent Users** | 3,500 baseline / 5,500 peak | Month-end APP-CSE submissions and bid-closing countdowns. |
-| **Registered Merchants (GOP-OMR)** | 10,000+ accredited vendors | Red and Platinum membership tiers uploading legal and financial dossiers. |
-| **Monthly Document Verifications** | 12,500 document pages/mo | SEC General Information Sheets, DTI, BIR Tax Clearances, PCAB, and AFS. |
-| **Annual Procurement Plans (APP-CSE)** | ~150,000 line items/mo | Ingested via Excel/PDF, semantically normalized and classified via UNSPSC. |
-| **Virtual Store & eMarketplace Orders** | ~200,000 transactions/mo | Two-tier distributed inventory reservation via Redis Redlock and AlloyDB. |
-| **e-Reverse Auction Real-Time Ticker** | Sub-second state push | High-frequency bidding events synchronized via Redis Sorted Sets (`ZSET`). |
-| **Data Ingestion & Telemetry** | 20 GB / day EPS logs | Telemetry ingested into Google SecOps (Chronicle) for autonomous SOC loop. |
-| **Legal WORM Record Retention** | 10 Years non-erasable | Append-only BigQuery sinks and immutable Cloud Storage compliance buckets. |
-| **High-Availability & SLA Target** | 99.9% Uptime (24x7) | Active-Passive multi-region architecture (Primary: Singapore, DR: Jakarta). |
+In mission-critical enterprise systems, infrastructure sizing is determined strictly by **Peak Concurrent Users (PCU)** and **Requests Per Second (RPS)**, rather than total account registrations.
+
+```
++----------------------------------------------------------------------------------------------------+
+|                                    USER DEMOGRAPHY & LOAD MODEL                                    |
+|                                                                                                    |
+|  User Tier                  Scale Metric              Activity Profile                             |
+|  ------------------------------------------------------------------------------------------------  |
+|  Total Registered Entities  5,000+ Procuring Entities Government agencies, LGUs, SUCs, GOCCs     |
+|  Total Registered Vendors   10,000 to 100,000+        Merchants in GOP-OMR (Red & Platinum)        |
+|  Daily Active Users (DAU)   15,000 to 25,000 / day    Procurement officers, bidders, BAC secretariats|
+|  Baseline Concurrent Users  3,500 active sessions     Regular business hours portal transactions   |
+|  Peak Surge Concurrency     5,500+ concurrent users   Month-end deadlines & bid-closing windows    |
++----------------------------------------------------------------------------------------------------+
+```
+
+### 2.2 Throughput & Requests-Per-Second (RPS) Translation
+
+* **Baseline Load (3,500 Concurrent Users):**
+  * Average user interaction interval: 15–20 seconds between page navigations, searches, and catalog clicks.
+  * Translates to **150 to 250 HTTP Requests Per Second (RPS)** reaching the application layer.
+* **Peak Surge Load (5,500 Concurrent Users):**
+  * During the final 30 minutes before bid submission deadlines (typically 9:00 AM – 12:00 PM), interaction frequency jumps to 5–8 seconds per user due to status polling, WebSocket clock refreshes, and multi-megabyte document uploads.
+  * Translates to **600 to 1,000 HTTP Requests Per Second (RPS)** at the edge.
+
+### 2.3 Multi-Layer Spike Absorption Architecture
+
+To ensure sub-second response times ($< 1,000\text{ ms}$) without paying for idle over-provisioned VMs, traffic spikes are absorbed sequentially across five layers:
+
+```
+[Incoming Spike: 1,000 RPS / 5,500 Users]
+                    │
+                    ▼
+┌────────────────────────────────────────────────────────┐
+│ Layer 1: Edge Perimeter (Cloud Armor + Cloud CDN)       │
+│  - Cloud CDN caches 80%+ of static assets & tender PDFs│
+│  - Cloud Armor absorbs volumetric DDoS & bot scraping  │
+└────────────────────────────────────────────────────────┘
+                    │ (Remaining 200 RPS Dynamic Ingress)
+                    ▼
+┌────────────────────────────────────────────────────────┐
+│ Layer 2: API Ingress & Serverless Burst (Cloud Run)    │
+│  - Cloud Run scales from 2 to 100+ container instances │
+│  - Handles unauthenticated public observer queries     │
+└────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+┌────────────────────────────────────────────────────────┐
+│ Layer 3: Core Application Cluster (GKE Autopilot)      │
+│  - HPA triggers pod autoscaling at 65% CPU threshold   │
+│  - Scales from 30 pods baseline to 80+ replicas in 90s │
+└────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+┌────────────────────────────────────────────────────────┐
+│ Layer 4: High-Speed Cache & In-Memory Lock (Redis)     │
+│  - Redis Redlock absorbs shopping cart inventory holds │
+│  - Redis ZSET ticker handles high-speed auction ranking│
+└────────────────────────────────────────────────────────┘
+                    │
+                    ▼
+┌────────────────────────────────────────────────────────┐
+│ Layer 5: In-Database Engine (Spanner & AlloyDB)        │
+│  - Spanner autoscales from 1,200 to 2,000 PUs for bids │
+│  - AlloyDB Read Pool absorbs catalog search reads      │
+└────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -178,7 +234,63 @@ The Bill of Materials is engineered against the following production concurrency
 
 ---
 
-## 4. Multi-Environment Architecture Cost Breakdown
+## 4. High Availability (HA) & Business Continuity Plan (BCP / Disaster Recovery)
+
+A production-grade government system requires two distinct tiers of resilience: **Intra-Region Multi-Zone High Availability** for daily fault tolerance, and **Inter-Region Disaster Recovery** to survive catastrophic regional blackouts.
+
+### 4.1 Intra-Region High Availability (Multi-Zone within Singapore: `asia-southeast1`)
+
+Every core component in the baseline BOM is provisioned with zero single points of failure across three independent physical zones (`a`, `b`, and `c`):
+
+| Component | HA Architecture | Failover Mechanism | Uptime SLA | Data Loss Risk (RPO) |
+| :--- | :--- | :--- | :--- | :--- |
+| **GKE Autopilot** | Worker nodes and pods distributed across 3 Availability Zones | Kubernetes scheduler automatically re-instantiates pods on surviving zones within 15 seconds | 99.95% | **0 Seconds** (Stateless compute) |
+| **Cloud Spanner** | Regional instance synchronously replicated across 3 zones via Paxos | Built-in quorum consensus; automatic, instantaneous zone failover with zero manual intervention | 99.99% | **0 Seconds** (Synchronous Paxos commit) |
+| **AlloyDB Enterprise** | Multi-zone High Availability pair: Primary in Zone A, Standby in Zone B | Automated heartbeats trigger automated failover in $< 30\text{ seconds}$ using shared distributed storage | 99.99% | **0 Seconds** (Shared multi-zone storage) |
+| **Memorystore Redis** | Standard Tier with primary and replica across 2 availability zones | Automatic failover with connection redirection in $< 10\text{ seconds}$ | 99.9% | $< 1\text{ Second}$ (In-memory ephemeral cache) |
+| **Cloud Storage** | Regional storage with dual-parity erasure coding across multiple facilities | Transparent data routing across underlying physical storage clusters | 99.9% (99.999999999% durability) | **0 Seconds** (Erasure coded) |
+
+---
+
+### 4.2 Inter-Region Disaster Recovery (Singapore $\rightarrow$ Jakarta: `asia-southeast2`)
+
+To fulfill the TOR's mandatory **RPO $< 15\text{ minutes}$** and **RTO $< 1\text{ hour}$** in the event of an entire regional failure:
+
+```
+                               DISASTER RECOVERY ARCHITECTURE
+                               
+     PRIMARY REGION: Singapore (asia-southeast1)          DR REGION: Jakarta (asia-southeast2)
+    ┌───────────────────────────────────────────┐        ┌────────────────────────────────────┐
+    │  - GKE Autopilot (10 Microservices)       │        │  - Cloud Storage Cross-Region Copy │
+    │  - Cloud Spanner (Graph & Contract Store) │───────>│  - Spanner Backup Cross-Region Copy│
+    │  - AlloyDB HA (Operational DB)            │        │  - AlloyDB Cross-Region Snapshots  │
+    │  - Memorystore Redis HA (Cache & Locks)   │        │  - Terraform IaC Rehydration Sinks │
+    └───────────────────────────────────────────┘        └────────────────────────────────────┘
+                          │                                                 │
+                          └─────────────── Cloud DNS Failover ──────────────┘
+```
+
+#### Comparison of Disaster Recovery Operating Strategies
+
+| Metric / Parameter | Option A: Automated Cross-Region Backups (Cold Standby) | Option B: Warm Standby DR (Live Secondary Replicas) | Option C: Active-Active Multi-Region |
+| :--- | :--- | :--- | :--- |
+| **Target Architecture** | Automated cross-region replication of backups/snapshots; on-demand cluster rehydration via Terraform | Secondary AlloyDB cluster + Spanner replica + minimal GKE pods running in Jakarta | Fully active production clusters in both Singapore & Jakarta serving live traffic |
+| **Recovery Point Objective (RPO)**| **$< 15\text{ Minutes}$** (Compliant with TOR) | **$< 1\text{ Minute}$** | **0 Seconds** |
+| **Recovery Time Objective (RTO)**| **30 to 45 Minutes** (Compliant with TOR) | **$< 15\text{ Minutes}$** | **0 Seconds** (Instantaneous) |
+| **Additional Monthly Cost (USD)** | **+$459.00 / month** | **+$3,129.00 / month** | **+$18,500.00 / month** |
+| **Additional Monthly Cost (PHP)** | **+₱29,835.00 / month** | **+₱203,385.00 / month** | **+₱1,202,500.00 / month** |
+| **Recommendation** | **RECOMMENDED FOR PS-DBM GAA BUDGET** | Optional High-Performance Tier | Not recommended (Cost-prohibitive) |
+
+#### Itemized Breakdown of Recommended Option A (Cold Standby DR to Jakarta: +$459.00 / mo)
+1. **Cross-Region Spanner Backups in Jakarta (`asia-southeast2`):** 1,500 GB automated daily backup copy = **$84.00/mo** (₱5,460.00).
+2. **Cross-Region AlloyDB Snapshots in Jakarta:** 1,500 GB snapshot replica = **$90.00/mo** (₱5,850.00).
+3. **Cloud Storage Cross-Region Replication:** Inter-region replication bandwidth (2 TB/mo) + Jakarta archive storage (25 TB) = **$220.00/mo** (₱14,300.00).
+4. **Cloud DNS Health Check Failover Routing:** Automated DNS health probes monitoring Singapore ingress = **$15.00/mo** (₱975.00).
+5. **IaC Automated Rehydration Pipeline (Cloud Build):** Pre-validated Terraform scripts for Jakarta deployment = **$50.00/mo** (₱3,250.00).
+
+---
+
+## 5. Multi-Environment Architecture Cost Breakdown
 
 To support the software engineering lifecycle across development, staging, and production:
 
@@ -201,7 +313,7 @@ To support the software engineering lifecycle across development, staging, and p
 
 ---
 
-## 5. Cost Optimization & Committed Use Discounts (CUDs)
+## 6. Cost Optimization & Committed Use Discounts (CUDs)
 
 By committing to a 1-Year or 3-Year baseline commitment for predictable production workloads (GKE Autopilot Compute, Cloud Spanner Processing Units, and AlloyDB instances), PS-DBM can capture major budget savings:
 
@@ -221,7 +333,7 @@ By committing to a 1-Year or 3-Year baseline commitment for predictable producti
 
 ---
 
-## 6. 3-Year System Maintenance Lifecycle TCO Projection
+## 7. 3-Year System Maintenance Lifecycle TCO Projection
 
 Under Section 6 of the TOR, the vendor and system architecture must support a **3-Year System Maintenance Lifecycle** with guaranteed 24/7 SLA uptime.
 
@@ -248,7 +360,7 @@ The 3-Year projection models a realistic **8% annual compound data growth** as m
 
 ---
 
-## 7. Statutory Value Realization & ROI (RA 12009 Compliance)
+## 8. Statutory Value Realization & ROI (RA 12009 Compliance)
 
 Investing in Google Cloud's modern AI and data architecture delivers concrete operational savings and risk reductions for PS-DBM:
 
@@ -263,8 +375,9 @@ Investing in Google Cloud's modern AI and data architecture delivers concrete op
 
 ---
 
-## 8. Summary Recommendation for PS-DBM Leadership
+## 9. Summary Recommendation for PS-DBM Leadership
 
 * **Recommended Budgetary Appropriation:** Formally appropriate **₱11,800,000 PHP per year (~$181,000 USD/year)** or **₱35,500,000 PHP over the 3-Year System Maintenance Lifecycle** under the General Appropriations Act (GAA).
+* **Disaster Recovery Strategy:** Adopt **Option A (Automated Cross-Region Backups to Jakarta with Terraform Rehydration)** at **+$459.00/month (₱29,835/mo)** to achieve complete geographic BCP protection within the approved budget.
 * **Procurement Vehicle:** Execute a **3-Year Committed Use Discount (CUD)** on core compute and database services immediately following Phase 4 User Acceptance Testing (UAT), locking in a **35.1% structural cost discount**.
 * **Billing Optimization Option:** If initial budget constraints require immediate reduction, adopt **Looker Studio Pro** ($270/mo) in lieu of Looker Core ($5,000/mo) during Year 1, lowering the Year 1 operational commitment to **₱5,230,000 PHP (~$80,500 USD)**.

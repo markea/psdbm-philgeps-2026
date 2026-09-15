@@ -46,6 +46,13 @@ Modernized electronic procurement platform for the Republic of the Philippines (
 7. **Storage & 10-Year WORM:** Cloud Storage Standard (10 TB) + Archive Storage with Bucket Lock in Compliance Mode (25 TB) — **$298.30 / mo**
 8. **Observability & 24/7 Support:** Cloud Operations Logging & Monitoring, Gemini Enterprise (35 seats), Enhanced Support with 1-hr P1 SLA — **$2,525.00 / mo**
 
+### 🛡️ High Availability, Spike Handling & Disaster Recovery (BCP)
+*   **Intra-Region HA (Singapore Multi-Zone):** Zero single points of failure across 3 independent availability zones (GKE Multi-AZ, Spanner 3-zone Paxos, AlloyDB active-standby, Redis HA).
+*   **Traffic Spike Resilience:** Sized for **3,500 baseline** scaling to **5,500+ peak concurrent users** (600–1,000 edge RPS). Spikes absorbed via Cloud CDN (80% cache hit), Cloud Armor DDoS protection, Cloud Run serverless bursts, GKE HPA autoscaling (30 to 80+ pods in 90s), Redis Redlock cart holds, and Spanner autoscaling.
+*   **Inter-Region Disaster Recovery (Singapore $\rightarrow$ Jakarta `asia-southeast2`):**
+    *   **Option A (Cold Standby DR - Recommended for GAA Budget):** Automated cross-region backups and Terraform rehydration — **+$459.00 / mo (₱29,835 / mo)** with **RPO $< 15\text{ mins}$** and **RTO $< 1\text{ hour}$**.
+    *   **Option B (Warm Standby DR):** Continuous live secondary replica in Jakarta — **+$3,129.00 / mo (₱203,385 / mo)** with **RPO $< 1\text{ min}$** and **RTO $< 15\text{ mins}$**.
+
 ---
 
 ## 🌐 Live Cloud Run Demonstration Prototype
