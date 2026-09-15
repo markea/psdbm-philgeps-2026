@@ -11,40 +11,42 @@
 
 This production-grade Bill of Materials (BOM) provides the comprehensive financial model, operational sizing, and business continuity architecture for the **Modernized Philippine Government Electronic Procurement System (mPhilGEPS Phase 2)**, in direct response to the requirements outlined in the Terms of Reference (TOR), the Business Requirements Document (BRD), and the Technical Design Document (TDD).
 
+### Strategic Architecture Upgrade: BigQuery Enterprise Edition Slots (Predictable vs. On-Demand)
+To eliminate catastrophic "bill shock" from unpartitioned ad-hoc scans or runaway analytical queries by observers and auditors, the BigQuery architecture is transitioned from unpredictable On-Demand per-TB pricing ($6.88/TB scanned) to **BigQuery Enterprise Edition Autoscaling Slots (25 Baseline, 100 Max Cap)**. 
+
+This architectural upgrade delivers three decisive advantages:
+1. **Guaranteed Budgetary Ceiling:** Compute capacity is capped at 100 slots within a dedicated reservation (`mphilgeps-analytics-reservation`). Queries execute within governed capacity and **can never exceed the budget**.
+2. **Zero-Cost In-Database Machine Learning:** Under Enterprise Edition, **BigQuery ML (`ARIMA_PLUS` & K-means clustering)** uses the provisioned reservation slots. The expensive **$312.50/TB** specialized ML training charge is **completely eliminated ($0.00)**.
+3. **Enterprise Governance & Security:** Unlocks native **VPC Service Controls**, **Customer-Managed Encryption Keys (CMEK)** via Cloud KMS HSM, and column/row-level security required by **RA 10173**.
+
 ### Financial Synthesis
 
 | Cost Dimension | On-Demand (List Price) | 1-Year Committed Use (CUD) | 3-Year Committed Use (CUD) |
 | :--- | :--- | :--- | :--- |
-| **Monthly Recurring Cost (USD)** | **$21,350.61** | **$16,850.00** | **$13,950.00** |
-| **Monthly Recurring Cost (PHP @ ₱65)** | **₱1,387,789.65** | **₱1,095,250.00** | **₱906,750.00** |
-| **Annualized Spend (USD)** | **$256,207.32** | **$202,200.00** | **$167,400.00** |
-| **Annualized Spend (PHP @ ₱65)** | **₱16,653,475.80** | **₱13,143,000.00** | **₱10,881,000.00** |
-| **3-Year Lifecycle Total (USD)** | **$806,807.00** | **$637,500.00** | **$527,600.00** |
-| **3-Year Lifecycle Total (PHP @ ₱65)** | **₱52,442,455.00** | **₱41,437,500.00** | **₱34,294,000.00** |
-| **Effective Cost Reduction** | *Baseline* | **-21.1%** | **-35.1%** |
+| **Monthly Recurring Cost (USD)** | **$22,098.66** | **$17,268.05** | **$14,170.05** |
+| **Monthly Recurring Cost (PHP @ ₱65)** | **₱1,436,412.90** | **₱1,122,423.25** | **₱921,053.25** |
+| **Annualized Spend (USD)** | **$265,183.92** | **$207,216.60** | **$170,040.60** |
+| **Annualized Spend (PHP @ ₱65)** | **₱17,236,954.80** | **₱13,469,079.00** | **₱11,052,639.00** |
+| **3-Year Lifecycle Total (USD)** | **$835,000.00** | **$653,000.00** | **$535,940.00** |
+| **3-Year Lifecycle Total (PHP @ ₱65)** | **₱54,275,000.00** | **₱42,445,000.00** | **₱34,836,100.00** |
+| **Effective Cost Reduction** | *Baseline* | **-21.9%** | **-35.9%** |
 
 ```
 +---------------------------------------------------------------------------------------------------+
 |                                 MONTHLY COST DISTRIBUTION (USD)                                   |
 |                                                                                                   |
-|  [Category 1] Compute & Containers (GKE, Cloud Run, Confidential Space)   :  $3,186.00  (14.9%)  |
-|  [Category 2] Databases (AlloyDB HA, Spanner Graph, Redis Cluster)        :  $3,102.80  (14.5%)  |
-|  [Category 3] Data Warehouse & In-DB ML (BigQuery, BQML, Looker Core)     :  $5,732.33  (26.8%)  |
-|  [Category 4] AI & Multi-Agent Hub (Gemini 3.x, DocAI, Vector Search)     :    $702.58   (3.3%)  |
-|  [Category 5] Perimeter, Network & API (Apigee, Cloud Armor Ent, CDN, LB) :  $4,872.10  (22.8%)  |
-|  [Category 6] Sovereign Security & SOC (Cloud KMS HSM, SecOps Chronicle) :    $931.50   (4.4%)  |
+|  [Category 1] Compute & Containers (GKE, Cloud Run, Confidential Space)   :  $3,186.00  (14.4%)  |
+|  [Category 2] Databases (AlloyDB HA, Spanner Graph, Redis Cluster)        :  $3,102.80  (14.0%)  |
+|  [Category 3] Data Warehouse & Governed Slots (BQ Slots, BQML, Looker)    :  $6,480.38  (29.3%)  |
+|  [Category 4] AI & Multi-Agent Hub (Gemini 3.x, DocAI, Vector Search)     :    $702.58   (3.2%)  |
+|  [Category 5] Perimeter, Network & API (Apigee, Cloud Armor Ent, CDN, LB) :  $4,872.10  (22.0%)  |
+|  [Category 6] Sovereign Security & SOC (Cloud KMS HSM, SecOps Chronicle) :    $931.50   (4.2%)  |
 |  [Category 7] Storage & 10-Yr WORM Compliance (GCS Standard & Archive)   :    $298.30   (1.4%)  |
-|  [Category 8] Observability & Support (Cloud Ops, Gemini Ent, 24/7 SLA)   :  $2,525.00  (11.8%)  |
+|  [Category 8] Observability & Support (Cloud Ops, Gemini Ent, 24/7 SLA)   :  $2,525.00  (11.5%)  |
 |                                                                           ---------------------  |
-|  TOTAL MONTHLY RUNTIME (ON-DEMAND LIST PRICE)                             : $21,350.61 (100.0%)  |
+|  TOTAL MONTHLY RUNTIME (GOVERNED SLOTS LIST PRICE)                        : $22,098.66 (100.0%)  |
 +---------------------------------------------------------------------------------------------------+
 ```
-
-### Strategic Architectural Value
-1. **Zero External AI Egress Fees:** By utilizing **BigQuery ML (`ARIMA_PLUS`)** and **Cloud Spanner Graph** natively in-database, predictive demand forecasting and cartel detection execute directly where the sovereign data resides. No expensive data movement to third-party AI APIs is incurred.
-2. **Serverless & Autopilot Elasticity:** Core microservices run on **GKE Autopilot** and **Cloud Run**, automatically scaling down during non-working hours and scaling up to handle peak traffic surges of **5,500+ concurrent sessions** without over-provisioning static VMs.
-3. **Mandated 10-Year WORM Compliance:** Archival records are held in **Cloud Storage Archive Tier with Bucket Lock in Compliance Mode** at only **$0.0024/GB/month**, fulfilling Commission on Audit (COA) and RA 12009 legal retention rules at negligible storage cost.
-4. **Dual-Channel Frontend Deployment:** Support for internal administrative users via out-of-the-box **Gemini Enterprise Workspace** side panels eliminates custom UI development overhead, while the external public portal runs on cost-efficient **Cloud Run** containers.
 
 ---
 
@@ -114,9 +116,10 @@ To ensure sub-second response times ($< 1,000\text{ ms}$) without paying for idl
                     │
                     ▼
 ┌────────────────────────────────────────────────────────┐
-│ Layer 5: In-Database Engine (Spanner & AlloyDB)        │
+│ Layer 5: In-Database Engine (Spanner & BigQuery Slots) │
 │  - Spanner autoscales from 1,200 to 2,000 PUs for bids │
-│  - AlloyDB Read Pool absorbs catalog search reads      │
+│  - BigQuery Enterprise Slots autoscale up to 100 slots │
+│  - Zero scan-based overage risk; capped compute budget │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -153,19 +156,19 @@ To ensure sub-second response times ($< 1,000\text{ ms}$) without paying for idl
 
 ---
 
-### Category 3: Enterprise Data Warehouse, In-Database ML & BI
+### Category 3: Enterprise Data Warehouse, Governed Slots & In-Database AI
 
 | Item # | GCP Component / SKU | Technical Sizing & Configuration | Unit Price (USD) | Monthly (USD) | Monthly (PHP @ ₱65) | Annual (USD) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **3.1** | **BigQuery Active Storage** | 3,000 GB (3 TB) operational analytical tables and staging data | $0.020 / GB-mo | $60.00 | ₱3,900.00 | $720.00 |
 | **3.2** | **BigQuery Long-Term Storage** | 10,000 GB (10 TB) unmodified historical procurement logs (>90 days old) | $0.010 / GB-mo | $100.00 | ₱6,500.00 | $1,200.00 |
 | **3.3** | **BigQuery Streaming Ingestion** | Storage Write API ingesting ~10M state transitions/audit events/mo | $0.025 / GB | $0.38 | ₱24.70 | $4.56 |
-| **3.4** | **BigQuery Query Processing** | 15 TB / month on-demand analytical & audit queries in `asia-southeast1` | $6.88 / TB scanned | $103.20 | ₱6,708.00 | $1,238.40 |
-| **3.5** | **BigQuery ML (`ARIMA_PLUS`)** | Weekly demand forecasting retraining (`holiday_region = 'PH'`) & clustering anomaly queries (~1.5 TB/mo) | $312.50 / TB ML training | $468.75 | ₱30,468.75 | $5,625.00 |
+| **3.4** | **BigQuery Enterprise Slots** | **Governed Capacity Reservation:** 25 Baseline Slots autoscaling up to 100 Max Slots (~20,000 slot-hours/mo). Zero on-demand scan cost risk. | $0.066 / slot-hr | $1,320.00 | ₱85,800.00 | $15,840.00 |
+| **3.5** | **BigQuery ML (`ARIMA_PLUS`)** | **Included in Slot Reservation:** Weekly demand forecasting retraining (`holiday_region = 'PH'`) & CPI clustering. Billed against slots at **$0 additional per-TB cost**. | $0.00 / TB (Covered by Slots) | $0.00 | ₱0.00 | $0.00 |
 | **3.6** | **Looker Core (Enterprise BI)** | Looker Core instance with embedded analytics for COA observers, public transparency, and PS-DBM dashboards | $5,000.00 / mo | $5,000.00 | ₱325,000.00 | $60,000.00 |
-| **SUB** | **Category 3 Subtotal** | **Data Warehouse, In-Database ML & BI** | — | **$5,732.33** | **₱372,601.45** | **$68,787.96** |
+| **SUB** | **Category 3 Subtotal** | **Data Warehouse, Governed Slots & In-DB AI** | — | **$6,480.38** | **₱421,224.70** | **$77,764.56** |
 
-> *Note on BI Alternatives:* If PS-DBM elects to deploy **Looker Studio Pro** with 30 named creator licenses ($9/user/mo = $270.00/mo) in lieu of Looker Core, Category 3 subtotal drops to **$1,002.33 / month** (₱65,151.45 PHP), reducing the total monthly bill by $4,730.00 USD.
+> *Note on BI Alternatives:* If PS-DBM elects to deploy **Looker Studio Pro** with 30 named creator licenses ($9/user/mo = $270.00/mo) in lieu of Looker Core, Category 3 subtotal drops to **$1,750.38 / month** (₱113,774.70 PHP), reducing the total monthly bill by $4,730.00 USD.
 
 ---
 
@@ -300,14 +303,14 @@ To support the software engineering lifecycle across development, staging, and p
 |                                                                                                    |
 |  Environment            Compute & DB Sizing              Monthly (USD)   Monthly (PHP)   % of TCO  |
 |  ------------------------------------------------------------------------------------------------  |
-|  1. Production (Live)   Full HA, Multi-AZ, Spanner Graph,  $21,350.61    ₱1,387,789.65    78.8%    |
-|                         AlloyDB HA, Cloud Armor Ent, SecOps                                        |
-|  2. Staging / UAT       Scaled HA (50% capacity), AlloyDB   $4,250.00      ₱276,250.00    15.7%    |
+|  1. Production (Live)   Full HA, Multi-AZ, Spanner Graph,  $22,098.66    ₱1,436,412.90    79.3%    |
+|                         AlloyDB HA, BQ Slots, Cloud Armor Ent, SecOps                              |
+|  2. Staging / UAT       Scaled HA (50% capacity), AlloyDB   $4,250.00      ₱276,250.00    15.3%    |
 |                         Single-AZ, Spanner 500 PU, Std WAF                                         |
-|  3. Dev / Sandbox       Cloud Run Serverless, Cloud SQL     $1,500.00       ₱97,500.00     5.5%    |
+|  3. Dev / Sandbox       Cloud Run Serverless, Cloud SQL     $1,500.00       ₱97,500.00     5.4%    |
 |                         `db-f1-micro`, Pay-As-You-Go AI                                            |
 |  ------------------------------------------------------------------------------------------------  |
-|  COMBINED ECOSYSTEM (Pre-CUD List Price)                   $27,100.61    ₱1,761,539.65   100.0%    |
+|  COMBINED ECOSYSTEM (Pre-CUD List Price)                   $27,848.66    ₱1,810,162.90   100.0%    |
 +----------------------------------------------------------------------------------------------------+
 ```
 
@@ -315,21 +318,22 @@ To support the software engineering lifecycle across development, staging, and p
 
 ## 6. Cost Optimization & Committed Use Discounts (CUDs)
 
-By committing to a 1-Year or 3-Year baseline commitment for predictable production workloads (GKE Autopilot Compute, Cloud Spanner Processing Units, and AlloyDB instances), PS-DBM can capture major budget savings:
+By committing to a 1-Year or 3-Year baseline commitment for predictable production workloads (GKE Autopilot Compute, Cloud Spanner Processing Units, AlloyDB instances, and BigQuery Enterprise Slots), PS-DBM can capture major budget savings:
 
 ### Discount Optimization Table
 
-| Workload Component | On-Demand Monthly | 1-Year CUD Savings (-30%) | 1-Year CUD Net | 3-Year CUD Savings (-50%) | 3-Year CUD Net |
+| Workload Component | On-Demand Monthly | 1-Year CUD Savings (-25% to -30%) | 1-Year CUD Net | 3-Year CUD Savings (-40% to -50%) | 3-Year CUD Net |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **GKE Autopilot Compute** | $2,788.39 | -$836.52 | $1,951.87 | -$1,394.20 | $1,394.19 |
 | **Cloud Spanner (1,200 PU)** | $788.40 | -$236.52 | $551.88 | -$394.20 | $394.20 |
 | **AlloyDB Enterprise Compute** | $1,533.00 | -$459.90 | $1,073.10 | -$766.50 | $766.50 |
-| **Total Eligible Base** | **$5,109.79** | **-$1,532.94** | **$3,576.85** | **-$2,554.90** | **$2,554.89** |
-| **All Other Services (Storage/AI/Sec)**| $16,240.82 | -$2,967.67* | $13,273.15 | -$4,845.71* | $11,395.11 |
-| **Net Production Monthly Total** | **$21,350.61** | **-$4,500.61 (-21.1%)**| **$16,850.00** | **-$7,400.61 (-35.1%)**| **$13,950.00** |
-| **Net Monthly (PHP @ ₱65)** | **₱1,387,789.65**| **₱1,095,250.00** | | **₱906,750.00** | |
+| **BigQuery Enterprise Slots (25-100)** | $1,320.00 | -$330.00 | $990.00 | -$528.00 | $792.00 |
+| **Total Eligible Base** | **$6,429.79** | **-$1,862.94** | **$4,566.85** | **-$3,082.90** | **$3,346.89** |
+| **All Other Services (Storage/AI/Sec)**| $15,668.87 | -$2,967.67* | $12,701.20 | -$4,845.71* | $10,823.16 |
+| **Net Production Monthly Total** | **$22,098.66** | **-$4,830.61 (-21.9%)**| **$17,268.05** | **-$7,928.61 (-35.9%)**| **$14,170.05** |
+| **Net Monthly (PHP @ ₱65)** | **₱1,436,412.90**| **₱1,122,423.25** | | **₱921,053.25** | |
 
-*\*Note: Enterprise annual spending tier agreements typically include an additional 5% to 10% negotiated discount across Cloud Armor, Apigee, and BigQuery services.*
+*\*Note: Enterprise annual spending tier agreements typically include an additional 5% to 10% negotiated discount across Cloud Armor, Apigee, and Storage services.*
 
 ---
 
@@ -345,16 +349,16 @@ The 3-Year projection models a realistic **8% annual compound data growth** as m
 |                                                                                                    |
 |  Year / Milestone       Strategic Assumption               USD Spend        PHP Spend (@ ₱65)      |
 |  ------------------------------------------------------------------------------------------------  |
-|  Year 1 (Implementation Initial rollout, data migration,  $167,400.00       ₱10,881,000.00        |
+|  Year 1 (Implementation Initial rollout, data migration,  $170,040.60       ₱11,052,639.00        |
 |  & Launch)              3-Year CUD locked in                                                       |
 |                                                                                                    |
-|  Year 2 (National       Full agency APP-CSE onboarding,    $175,700.00       ₱11,420,500.00        |
+|  Year 2 (National       Full agency APP-CSE onboarding,    $178,500.00       ₱11,602,500.00        |
 |  Expansion)             +5% data & analytics expansion                                             |
 |                                                                                                    |
-|  Year 3 (Mature         Full eMarketplace logistics,       $184,500.00       ₱11,992,500.00        |
+|  Year 3 (Mature         Full eMarketplace logistics,       $187,400.00       ₱12,181,000.00        |
 |  Operations)            10-year WORM archival accumulation                                         |
 |  ------------------------------------------------------------------------------------------------  |
-|  3-YEAR TOTAL TCO       Fully Optimized 3-Year Lifecycle   $527,600.00       ₱34,294,000.00        |
+|  3-YEAR TOTAL TCO       Fully Optimized 3-Year Lifecycle   $535,940.00       ₱34,836,100.00        |
 +----------------------------------------------------------------------------------------------------+
 ```
 
@@ -364,8 +368,8 @@ The 3-Year projection models a realistic **8% annual compound data growth** as m
 
 Investing in Google Cloud's modern AI and data architecture delivers concrete operational savings and risk reductions for PS-DBM:
 
-1. **Elimination of Legacy Relational Database Licensing:**
-   * Transitioning away from legacy proprietary database licenses (e.g., Oracle EE / Microsoft SQL Server) to **AlloyDB Enterprise** and **Cloud Spanner** yields an estimated **₱20,000,000 to ₱28,000,000 in avoided multi-year software licensing and core maintenance fees**.
+1. **Elimination of Proprietary Database Licensing & On-Demand Scan Risks:**
+   * Transitioning away from legacy proprietary database licenses to **AlloyDB Enterprise**, **Cloud Spanner**, and **Governed BigQuery Slots** yields an estimated **₱20,000,000 to ₱28,000,000 in avoided multi-year software licensing, core maintenance, and unplanned scan-overage fees**.
 2. **85% Reduction in Manual Dossier Verification Labor:**
    * Automated verification of SEC GIS, DTI, BIR Tax Clearances, PCAB Licenses, and Audited Financial Statements via **Document AI** and **Gemini 3.7 Flash** eliminates weeks of manual paper reviews, reducing merchant accreditation processing time from **14 business days down to under 15 minutes**.
 3. **Prevention of Procurement Bid-Rigging & Cartel Losses:**
@@ -377,7 +381,8 @@ Investing in Google Cloud's modern AI and data architecture delivers concrete op
 
 ## 9. Summary Recommendation for PS-DBM Leadership
 
-* **Recommended Budgetary Appropriation:** Formally appropriate **₱11,800,000 PHP per year (~$181,000 USD/year)** or **₱35,500,000 PHP over the 3-Year System Maintenance Lifecycle** under the General Appropriations Act (GAA).
+* **Recommended Budgetary Appropriation:** Formally appropriate **₱12,000,000 PHP per year (~$185,000 USD/year)** or **₱36,000,000 PHP over the 3-Year System Maintenance Lifecycle** under the General Appropriations Act (GAA).
+* **BigQuery Capacity Strategy:** Enforce **BigQuery Enterprise Edition Autoscaling Slots (25 Baseline, 100 Max Cap)** within the `mphilgeps-analytics-reservation` project to guarantee predictable billing, eliminate on-demand scan spikes, and unlock free BigQuery ML model execution.
 * **Disaster Recovery Strategy:** Adopt **Option A (Automated Cross-Region Backups to Jakarta with Terraform Rehydration)** at **+$459.00/month (₱29,835/mo)** to achieve complete geographic BCP protection within the approved budget.
-* **Procurement Vehicle:** Execute a **3-Year Committed Use Discount (CUD)** on core compute and database services immediately following Phase 4 User Acceptance Testing (UAT), locking in a **35.1% structural cost discount**.
-* **Billing Optimization Option:** If initial budget constraints require immediate reduction, adopt **Looker Studio Pro** ($270/mo) in lieu of Looker Core ($5,000/mo) during Year 1, lowering the Year 1 operational commitment to **₱5,230,000 PHP (~$80,500 USD)**.
+* **Procurement Vehicle:** Execute a **3-Year Committed Use Discount (CUD)** on core compute, database, and slot services immediately following Phase 4 User Acceptance Testing (UAT), locking in a **35.9% structural cost discount**.
+* **Billing Optimization Option:** If initial budget constraints require immediate reduction, adopt **Looker Studio Pro** ($270/mo) in lieu of Looker Core ($5,000/mo) during Year 1, lowering the Year 1 operational commitment to **₱5,760,000 PHP (~$88,600 USD)**.

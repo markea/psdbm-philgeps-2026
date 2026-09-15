@@ -2,7 +2,7 @@
 
 [![Architecture](https://img.shields.io/badge/Architecture-Google_Cloud_%26_Spanner_Graph-4285F4?logo=googlecloud&logoColor=white)](./mPhilGEPS_GoogleCloud_TDD.md)
 [![AI Stack](https://img.shields.io/badge/AI-Gemini_3.1_Pro_%26_3.7_Flash-8E75B2?logo=google&logoColor=white)](./mPhilGEPS_GoogleCloud_BRD.md)
-[![BOM & Cost](https://img.shields.io/badge/BOM-3--Year_TCO_₱34.3M-34A853?logo=googlecloud&logoColor=white)](./mPhilGEPS_Production_BOM.md)
+[![BOM & Cost](https://img.shields.io/badge/BOM-3--Year_TCO_₱34.8M-34A853?logo=googlecloud&logoColor=white)](./mPhilGEPS_Production_BOM.md)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Cloud_Run-0F9D58?logo=googlecloud&logoColor=white)](https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/)
 
 Modernized electronic procurement platform for the Republic of the Philippines (Procurement Service - Department of Budget and Management / PS-DBM), engineered to comply with the **New Government Procurement Act (RA 12009 / NGPA)** and the **Data Privacy Act (RA 10173)**.
@@ -13,7 +13,7 @@ Modernized electronic procurement platform for the Republic of the Philippines (
 
 *   📄 **[Business Requirements Document (BRD)](./mPhilGEPS_GoogleCloud_BRD.md):** Detailed mapping of procurement workflows, legal mandates, and next-generation AI requirements to the Google Cloud stack.
 *   📄 **[Technical Design Document (TDD)](./mPhilGEPS_GoogleCloud_TDD.md):** Engineering blueprint detailing in-database AI processing (Spanner Graph & BigQuery ML), dual-pass UNSPSC classification, Document AI verification matrix, Confidential Space Bid Vault, and progressive deployment paths (Localhost $\rightarrow$ GCP Demo $\rightarrow$ Production GKE).
-*   📊 **[Production Bill of Materials (BOM) & 3-Year TCO (Markdown)](./mPhilGEPS_Production_BOM.md):** Itemized production-grade cost model across 8 architectural categories, multi-environment distribution, CUD optimizations (-35.1%), and 3-year lifecycle projection ($1.00 USD = ₱65.00 PHP).
+*   📊 **[Production Bill of Materials (BOM) & 3-Year TCO (Markdown)](./mPhilGEPS_Production_BOM.md):** Itemized production-grade cost model across 8 architectural categories, multi-environment distribution, CUD optimizations (-35.9%), and 3-year lifecycle projection ($1.00 USD = ₱65.00 PHP).
 *   📑 **[Production Bill of Materials (BOM) & 3-Year TCO (Executive PDF)](./mPhilGEPS_Production_BOM.pdf):** 14-page styled executive report with line-item SKU rates, subtotals, and budgetary recommendations for PS-DBM leadership.
 *   📄 **[Master Implementation & Delivery Plan](./mPhilGEPS_Implementation_Plan.md):** Phased execution roadmap, Work Breakdown Structure (WBS), risk registry, and environment promotion matrix.
 *   📄 **[PS-DBM Gemini Requirements Architecture v1.0](./PS-DBM%20-%20Gemini%20Reqs%20-%20v1.0.pdf):** Foundational architectural specifications and Terms of Reference (TOR) analysis.
@@ -25,21 +25,22 @@ Modernized electronic procurement platform for the Republic of the Philippines (
 *   **Primary Region:** Singapore (`asia-southeast1`) | **Disaster Recovery Region:** Jakarta (`asia-southeast2`)
 *   **Currency Benchmark:** $1.00 USD = **₱65.00 PHP**
 *   **Workload Sizing:** 3,500 baseline / 5,500 peak concurrent users, 10,000+ merchants, 12,500 document pages/mo, 150,000 APP-CSE items/mo, 10-year WORM compliance retention.
+*   **Data Warehouse Engine:** BigQuery Enterprise Edition Autoscaling Slots (25 Baseline, 100 Hard Cap) with zero-cost bundled BigQuery ML.
 
 | Cost Dimension | On-Demand (List Price) | 1-Year Committed Use (CUD) | 3-Year Committed Use (CUD) |
 | :--- | :--- | :--- | :--- |
-| **Monthly Recurring (USD)** | **$21,350.61** | **$16,850.00** | **$13,950.00** |
-| **Monthly Recurring (PHP @ ₱65)** | **₱1,387,789.65** | **₱1,095,250.00** | **₱906,750.00** |
-| **Annualized Spend (USD)** | **$256,207.32** | **$202,200.00** | **$167,400.00** |
-| **Annualized Spend (PHP @ ₱65)** | **₱16,653,475.80** | **₱13,143,000.00** | **₱10,881,000.00** |
-| **3-Year Lifecycle Total (USD)** | **$806,807.00** | **$637,500.00** | **$527,600.00** |
-| **3-Year Lifecycle Total (PHP @ ₱65)** | **₱52,442,455.00** | **₱41,437,500.00** | **₱34,294,000.00** |
-| **Effective Cost Reduction** | *Baseline* | **-21.1%** | **-35.1%** |
+| **Monthly Recurring (USD)** | **$22,098.66** | **$17,268.05** | **$14,170.05** |
+| **Monthly Recurring (PHP @ ₱65)** | **₱1,436,412.90** | **₱1,122,423.25** | **₱921,053.25** |
+| **Annualized Spend (USD)** | **$265,183.92** | **$207,216.60** | **$170,040.60** |
+| **Annualized Spend (PHP @ ₱65)** | **₱17,236,954.80** | **₱13,469,079.00** | **₱11,052,639.00** |
+| **3-Year Lifecycle Total (USD)** | **$835,000.00** | **$653,000.00** | **$535,940.00** |
+| **3-Year Lifecycle Total (PHP @ ₱65)** | **₱54,275,000.00** | **₱42,445,000.00** | **₱34,836,100.00** |
+| **Effective Cost Reduction** | *Baseline* | **-21.9%** | **-35.9%** |
 
 ### 8 Architectural Cost Pillars:
 1. **Core Compute & Containers:** GKE Autopilot (55 vCPU / 150 GiB RAM avg), Cloud Run, Confidential Space VMs — **$3,186.00 / mo**
 2. **Databases:** Cloud Spanner + Spanner Graph (1,200 PU), AlloyDB Enterprise HA (8 vCPU / 64 GiB), Memorystore Redis HA — **$3,102.80 / mo**
-3. **Data Warehouse & In-Database ML:** BigQuery Active/Long-term storage, on-demand queries, BigQuery ML (`ARIMA_PLUS`), Looker Core — **$5,732.33 / mo**
+3. **Data Warehouse & Governed Slots:** BigQuery Enterprise Edition Slots (25 Baseline, 100 Max Cap), BigQuery ML (`ARIMA_PLUS` bundled at $0 additional cost), Active/Long-term storage, Looker Core — **$6,480.38 / mo**
 4. **Sovereign AI & Multi-Agent Hub:** Document AI (CDE/Form/Layout), Gemini 3.1 Pro, Gemini 3.7 Flash, Vertex AI Vector Search, Model Armor — **$702.58 / mo**
 5. **Edge Perimeter & Networking:** Apigee API Management (4M calls/mo), Cloud Armor Enterprise, Global ALB, Cloud CDN, Cloud NAT — **$4,872.10 / mo**
 6. **Sovereign Root of Trust & SOC:** Cloud KMS HSM (FIPS 140-2 Level 3), Google SecOps (Chronicle) 20 GB/day telemetry — **$931.50 / mo**
