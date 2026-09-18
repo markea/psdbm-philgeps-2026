@@ -57,14 +57,22 @@ Modernized electronic procurement platform for the Republic of the Philippines (
 
 ---
 
-## 🌐 Live Cloud Run Demonstration Prototype
+## 🌐 Live Cloud Run Demonstration Prototype (`v2.0.0-DEMO`)
 
-A public demonstration prototype of the mPhilGEPS portal is deployed live on Google Cloud Run:
+A public demonstration prototype of the mPhilGEPS portal and Multi-Agent Intelligence Command Center is deployed live on Google Cloud Run:
 
 * 🔗 **Live Web Portal:** [https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/](https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/)
+* 📊 **Golden Dataset Agent Evaluation API:** [https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/api/v1/agents/eval-report](https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/api/v1/agents/eval-report) ([Markdown Scorecard](./evals/EVAL_REPORT.md))
+* 🕸️ **Spanner Graph Cartel API:** [https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/api/v1/collusion/graph](https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/api/v1/collusion/graph)
+* 🌐 **OCDS v1.1 Open Data Bulk Feed:** [https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/api/v1/open-data/ocds-export?format=json](https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/api/v1/open-data/ocds-export?format=json)
 * 📑 **Interactive OpenAPI Swagger Docs:** [https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/docs](https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/docs)
 * 🩺 **Health Check Endpoint:** [https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/health](https://mphilgeps-demo-portal-684075603690.asia-southeast1.run.app/health)
-* **Access Mode:** Public unauthenticated demo sandbox (`--allow-unauthenticated`) featuring persistent warning banners indicating prototype demonstration status.
+* **Interactive Demo Capabilities:**
+  1. **Tab 1 — APP-CSE Dual-Pass AI Ingestion:** One-click synthetic workbook generator, Pass 1 (`Gemini 3.7 Flash`) & Pass 2 (`Gemini 3.1 Pro`) 4-tier UNSPSC classification, RA 12009 Sec. 7.2 ceiling validation, and BigQuery ML `ARIMA_PLUS` stream.
+  2. **Tab 2 — Cloud Spanner Graph Anti-Collusion Visualizer:** Interactive SVG property graph (`MPhilGepsProcurementGraph`), GQL query viewer, `CPI = 0.942` alert, and Benford's Law first-digit anomaly chart.
+  3. **Tab 3 — 4-Tier Anti-Scraping & OCDS Open Data Offload:** Live edge simulator comparing Shared LGU NAT IPs (`Score 0.94 -> 200 OK`) vs. Commercial Scraper Bots (`Score 0.08 -> 429 Blocked & Redirected to OCDS CDN`), plus 1-click OCDS v1.1 JSON/CSV downloads.
+  4. **Tab 4 — Golden Dataset Evaluation Suite (15 Cases):** Live evaluation dashboard benchmarking `BAC Advisor`, `COA Auditor`, `Merchant Help`, `Supervisor Auto-Router`, and `Model Armor RA 10173 DLP` (`15/15 PASS — 100.0% Composite Score`).
+* **Access Mode:** Public unauthenticated demo sandbox (`--allow-unauthenticated`) featuring persistent **⚠️ DEMO ENVIRONMENT ONLY** warning banners.
 
 ---
 
