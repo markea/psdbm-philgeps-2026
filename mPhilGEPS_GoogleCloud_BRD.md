@@ -69,7 +69,10 @@ To operationalize RA 12009, mPhilGEPS integrates Google’s cutting-edge **Gemin
 
 ```mermaid
 graph TD
-    UI["mPhilGEPS Multi-Channel Portal UI<br/>Procuring Entities • Merchants • COA Observers"] -->|"HTTPS / gRPC mTLS"| GW["API Gateway & Google Cloud Armor<br/>WAF, DDoS Protection, Rate Limiting, Geo-Fencing"]
+    UI["mPhilGEPS Multi-Channel Portal UI<br/>Procuring Entities • Merchants • COA Observers"] -->|"HTTPS / gRPC mTLS"| EdgeWAF["Cloud Armor Enterprise & reCAPTCHA Enterprise<br/>JA3 TLS Fingerprinting • Frictionless Bot Scoring • Geo-Fencing"]
+    
+    EdgeWAF -->|"Verified Human / G2G API"| GW["Apigee API Management<br/>OAuth 2.0 • mTLS • Spike Arrest & Quotas"]
+    EdgeWAF -->|"CSO / Scraper Offload (OCDS)"| OpenData["Dedicated Open Data Portal<br/>Cloud CDN + Cloud Storage Bulk JSON/CSV Feeds"]
     
     GW --> DocPipe["Document Pipeline<br/>GOP-OMR Registration"]
     GW --> TxPipe["Transaction & In-Database ML<br/>Procurement Core"]
@@ -79,7 +82,8 @@ graph TD
     DocPipe --> GemFlash1["Gemini 3.7 Flash<br/>Audit Validation"]
     
     TxPipe --> SpannerGraph["Cloud Spanner + Spanner Graph<br/>Bids & Cartels"]
-    TxPipe --> BQML["BigQuery ML<br/>Demand & Anomalies"]
+    TxPipe --> BQML["BigQuery ML (Enterprise Slots)<br/>Demand & Anomalies"]
+    BQML -.->|"Nightly Scheduled OCDS Export"| OpenData
     
     MASPipe --> AgentBuilder["Gemini Enterprise Agent Builder<br/>Grounded RAG / RA 12009 Playbook"]
     MASPipe --> GemFlash2["Gemini 3.7 Flash<br/>Sub-Second Intent Routing"]
@@ -219,6 +223,27 @@ graph TD
     *   Inline inspection of every LLM prompt and response.
     *   Automatic redaction of Tax Identification Numbers (TIN), mobile numbers, bank account details, and confidential reserve prices from public-facing auditor assistants.
     *   Active defense against prompt injection attacks aimed at manipulating procurement evaluation scores or leaking BAC deliberations.
+
+---
+
+### 5.7 Commercial Anti-Scraping Defense & Statutory Open Data De-Monetization Strategy
+*   **Business & Legal Paradox Addressed:** Commercial data brokers and third-party lead-generation platforms systematically scrape the live PhilGEPS Electronic Bulletin Board (EBB), Merchant Registry (GOP-OMR), and award notices to resell paid bid-intelligence alerts to private contractors—degrading portal responsiveness during month-end surges and monetizing taxpayer-funded infrastructure. However, under **RA 12009 Section 20** and the **Open Government Partnership (OGP)**, PhilGEPS is legally mandated to provide Open Data transparency to COA auditors, Civil Society Organizations (CSOs), and citizens.
+*   **Four-Tier Defense-in-Depth & Commercial De-Monetization Architecture:**
+    1.  **Tier 1 — Edge Bot Management & TLS Fingerprinting (`Google Cloud Armor Enterprise`):**
+        *   Inspects **JA3 / TLS client fingerprints** at the global edge to immediately drop headless automation frameworks (`Puppeteer`, `Selenium`, `Scrapy`, `curl`, residential proxy pools) before they reach GKE compute pods.
+        *   Enforces endpoint-specific rate limiting (50 requests/minute per signature) on high-value search endpoints (`/merchants/search`, `/bids/bulletin-board`).
+    2.  **Tier 2 — Frictionless Behavioral Scoring & Shared Government NAT Protection (`reCAPTCHA Enterprise`):**
+        *   Deploys invisible, zero-friction behavioral risk scoring (`0.0` to `1.0`) across EBB tender searches, GOP-OMR lookups, and document downloads—preserving the **$< 5\text{-second}$ Page Display SLA**.
+        *   **Protection for Shared Agency NAT IPs:** Government agencies and LGUs often route hundreds of procurement staff through a single shared corporate NAT IP gateway. Relying solely on IP rate-limiting would falsely block legitimate BAC officers. By validating reCAPTCHA Enterprise action tokens directly at the Cloud Armor edge:
+            *   **Score $> 0.7$ (Verified Human Buyer / BAC Officer):** Allowed seamlessly even from high-volume shared agency NAT IPs.
+            *   **Score $0.3 - 0.7$ (Ambiguous Traffic):** Triggered for lightweight step-up verification or API throttling.
+            *   **Score $< 0.3$ (Automated Scraper / Proxy Bot):** Blocked at edge with `HTTP 429` or automatically redirected to static Open Data feeds.
+    3.  **Tier 3 — API Hardening & Spike Arrest (`Apigee API Management`):**
+        *   Requires short-lived OAuth 2.0 / JWT tokens, mutual TLS (mTLS), and hard concurrency quotas on all B2B/G2G integration endpoints (SEC, DTI, BIR, Landbank) to prevent script-based batch harvesting.
+    4.  **Tier 4 — The "Open Data Offload & De-Monetization" Pattern (`BigQuery Enterprise Slots` + `Cloud Storage` + `Cloud CDN`):**
+        *   Rather than allowing scrapers or CSOs to hammer live transactional databases (`AlloyDB` & `Cloud Spanner`), mPhilGEPS schedules nightly automated exports from **BigQuery Enterprise Slots** to public **Cloud Storage** buckets fronted by **Cloud CDN**.
+        *   Publishes standardized, free bulk datasets conforming to the **Open Contracting Data Standard (OCDS)** in JSON, CSV, and Parquet formats, paired with explicit `robots.txt` routing directives.
+        *   **Economic De-Monetization Impact:** By providing clean, official, real-time OCDS bulk feeds and free AI-powered natural language search (`Public Transparency & COA Auditor Agent`) directly to the public, PS-DBM completely **eliminates the commercial moat of paid third-party scraper middlemen** while achieving 100% statutory compliance under RA 12009.
 
 ---
 

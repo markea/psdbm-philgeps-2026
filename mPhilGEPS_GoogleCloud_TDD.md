@@ -63,20 +63,24 @@ The system architecture is structured across three evolutionary stages to ensure
     *   **AlloyDB Enterprise HA:** High-throughput transactional data (Virtual Store, wallets, merchant profiles).
     *   **Cloud Spanner + Spanner Graph:** High-consistency contract ledger, bidding transactions, and real-time cartel graph queries.
     *   **BigQuery:** Central data warehouse with BigQuery ML (`ARIMA_PLUS` demand forecasting and clustering anomaly detection).
-*   **Perimeter & Edge:** **Cloud Load Balancing** + **Google Cloud Armor** (OWASP Top 10, rate limiting, geo-fencing).
+*   **Perimeter, Edge & Anti-Scraping:** **Global Cloud Load Balancing** + **Google Cloud Armor Enterprise** (JA3 TLS fingerprinting, OWASP Top 10, endpoint rate limiting) + **reCAPTCHA Enterprise** (frictionless behavioral scoring & shared agency NAT protection) + **Dedicated Open Data OCDS Portal** (Cloud CDN + Cloud Storage bulk JSON/CSV offload).
 *   **Sovereign Security:** **Confidential Space** on Confidential VMs for bid sealing, **Cloud KMS HSM** (FIPS 140-2 Level 3), and **Google SecOps (Chronicle)** Autonomous Agentic SOC.
 
 ```mermaid
 graph TD
-    Public["Procuring Entities • Merchants • Observers"] --> Armor["Cloud Armor WAF + Global Load Balancer"]
-    Armor --> Gateway["Apigee API Gateway"]
+    Public["Procuring Entities • Merchants • Observers • Scrapers"] --> Armor["Cloud Armor Enterprise WAF + Global Load Balancer<br/>JA3 TLS Fingerprinting • Rate Limiting • Geo-Fencing"]
+    Armor --> Recaptcha["reCAPTCHA Enterprise Edge Evaluation<br/>Frictionless Risk Score (0.0 - 1.0) • Shared Agency NAT Protection"]
+    
+    Recaptcha -->|"Verified Human / G2G API"| Gateway["Apigee API Gateway<br/>OAuth 2.0 • mTLS • Spike Arrest"]
+    Recaptcha -->|"CSO / Scraper Offload"| OpenData["Dedicated Open Data OCDS Portal<br/>Cloud CDN + Cloud Storage Bulk JSON/CSV Dumps"]
     
     Gateway --> GKE["GKE Autopilot: mPhilGEPS Microservices"]
     
     GKE --> AlloyDB[("AlloyDB HA: Transactions")]
     GKE --> Spanner[("Cloud Spanner + Spanner Graph")]
     GKE --> Cache[("Memorystore Redis Cluster")]
-    GKE --> BQ[("BigQuery: Immutable Audit & ML")]
+    GKE --> BQ[("BigQuery Enterprise Slots: Immutable Audit & ML")]
+    BQ -.->|"Nightly Scheduled OCDS Export"| OpenData
     
     GKE --> ModelArmor["Google Cloud Model Armor"]
     ModelArmor --> GenAI["Vertex AI: Gemini 3.1 Pro & 3.7 Flash"]
@@ -481,6 +485,38 @@ CREATE INDEX idx_wallet_ledger_wallet ON wallet_ledger(wallet_id);
 ### 11.3 10-Year Tamper-Proof Audit & Record Retention (RA 12009 / COA)
 *   **Cloud Storage Bucket Lock:** Object Retention in Compliance Mode (10-year non-erasable duration) for all submitted tender dossiers, bids, and APP-CSEs.
 *   **BigQuery Immutable Sinks:** All audit events streamed to append-only BigQuery tables with row-level hashing for COA verification.
+
+### 11.4 Edge Anti-Scraping Defense, reCAPTCHA Enterprise & OCDS Open Data Offload Architecture
+To protect mPhilGEPS from commercial data brokers scraping public procurement data to resell subscription bid-alert services—while preserving sub-second UI performance and fulfilling statutory Open Data mandates under **RA 12009 Sec. 20**—the platform implements a 4-tier defense-in-depth perimeter:
+
+```mermaid
+graph TD
+    Client["Incoming Request<br/>(Procurement Officer / CSO / Scraper Bot)"] --> Edge["Layer 1: Google Cloud Armor Enterprise<br/>JA3 TLS Fingerprint Match • Geo-Fencing • Rate Limit (50 req/min)"]
+    
+    Edge -->|"Signature Validated"| Recaptcha["Layer 2: reCAPTCHA Enterprise Edge Token Assessment<br/>Frictionless Behavioral Score (0.0 to 1.0)"]
+    
+    Recaptcha -->|"Score > 0.7 (Human / Shared LGU NAT)"| Apigee["Layer 3: Apigee API Gateway<br/>OAuth 2.0 • mTLS • Spike Arrest"]
+    Recaptcha -->|"Score 0.3 - 0.7 (Ambiguous)"| Challenge["Step-Up Challenge / Throttled Queue"]
+    Recaptcha -->|"Score < 0.3 (Commercial Scraper Bot)"| Offload["Layer 4: Dedicated OCDS Open Data Offload<br/>HTTP 429 or Redirect to Cloud CDN Bulk Feeds"]
+    
+    Apigee --> Origin[("GKE Microservices / AlloyDB / Spanner")]
+    Offload --> CDN[("Cloud CDN + Cloud Storage<br/>Nightly BigQuery OCDS JSON/CSV Exports")]
+```
+
+1.  **Cloud Armor JA3 TLS Fingerprinting & Endpoint Rate-Limiting:**
+    *   Inspects TLS handshakes and **JA3 fingerprints** at Google Edge nodes to drop headless automation scripts (`Puppeteer`, `Playwright`, `Selenium`, `Scrapy`, `curl`) before they consume application pod CPU or database connections.
+    *   Enforces granular rate-limiting policies on high-value scraping targets (`/api/v1/merchants/search`, `/api/v1/tenders/bulletin-board`) capped at **50 requests/minute per session signature**.
+2.  **Frictionless Risk Scoring & Shared Government Agency NAT Protection (`reCAPTCHA Enterprise`):**
+    *   **Sub-5ms Edge Evaluation:** Action tokens (`action: 'ebb_search'`, `action: 'merchant_lookup'`) are validated directly at the Cloud Armor edge, adding $< 5\text{ ms}$ overhead and preserving the mandatory **$< 5\text{-second}$ Page Load SLA**.
+    *   **Preventing False Positives on Shared Government NAT Gateways:** Philippine government agencies and LGUs commonly route 100–500 procurement personnel through a single shared corporate NAT IP address. Standard IP-based rate limiting would falsely lock out entire agencies during month-end filing deadlines. By combining IP telemetry with reCAPTCHA Enterprise behavioral mouse/DOM dynamics:
+        *   **Score $> 0.7$:** Verified human agency buyers pass seamlessly regardless of shared NAT IP volume.
+        *   **Score $0.3 - 0.7$:** Ambiguous traffic triggers lightweight session verification.
+        *   **Score $< 0.3$:** Residential proxy farms and automated scrapers are blocked (`HTTP 429`) or redirected to static OCDS buckets.
+3.  **API Spike Arrest & Consumer Quotas (`Apigee API Management`):**
+    *   Enforces mutual TLS (mTLS), short-lived JWT tokens, and strict per-consumer rate quotas on external G2G/B2B APIs (SEC, DTI, BIR, Landbank).
+4.  **Dedicated Open Contracting Data Standard (OCDS) Bulk Offload (`BigQuery` + `Cloud Storage` + `Cloud CDN`):**
+    *   A scheduled nightly Cloud Scheduler job executes a governed export inside **BigQuery Enterprise Slots**, serializing public procurement notices, awards, and contracts into standardized **OCDS JSON, CSV, and Parquet** files stored in a public `gs://mphilgeps-open-data-ocds` bucket fronted by **Cloud CDN**.
+    *   **Commercial De-Monetization:** Providing free, official, daily OCDS bulk downloads and an AI-powered natural language query interface (`Public Transparency & COA Auditor Agent`) completely **destroys the economic value proposition of commercial scraper middlemen**, while offloading 100% of bulk analytical downloads from transactional `AlloyDB` and `Cloud Spanner` instances.
 
 ---
 

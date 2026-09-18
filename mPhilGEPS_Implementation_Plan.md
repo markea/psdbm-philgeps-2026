@@ -103,21 +103,23 @@ gantt
     *   [ ] Google SecOps (Chronicle) ingestion of tens of thousands of EPS events per second.
     *   [ ] Gemini Agentic SOC Loop for real-time quarantine of compromised credentials and abnormal pricing table reads.
     *   [ ] Google Cloud Model Armor inspecting prompts/outputs and masking TIN, mobile numbers, and bank accounts (RA 10173).
+    *   [ ] **reCAPTCHA Enterprise & Cloud Armor Anti-Scraping Rules:** Frictionless behavioral risk scoring (`0.0 - 1.0`), JA3 TLS fingerprint matching, and shared agency NAT IP protection.
 *   **Deliverable 4.2: Infrastructure as Code (Terraform) & Demo Deployment**
     *   [ ] Terraform modules for Cloud Run services, Cloud SQL, Memorystore, and Secret Manager.
-    *   [ ] Identity-Aware Proxy (IAP) restricting access to authorized `@ps-philgeps.gov.ph` users.
+    *   [ ] Identity-Aware Proxy (IAP) restricting access to authorized `@ps-philgeps.gov.ph` users (with public demo sandbox bypass).
     *   [ ] Live stakeholder demonstration of APP-CSE upload, Virtual Store checkout, and Agentic Assistant.
 
 ### Phase 5: Enterprise Production Scale, DR & 3-Year Maintenance (Months 12–36)
 **Objective:** Enterprise scaling, high availability, disaster recovery, and final cutover.
 *   **Deliverable 5.1: GKE Autopilot Cluster & Cloud Spanner Autoscaling**
     *   [ ] Multi-zone GKE Autopilot deployment with Dataplane V2 default-deny network policies.
-    *   [ ] Cloud Armor WAF and Global Cloud Load Balancing with DDoS mitigation.
+    *   [ ] Cloud Armor Enterprise WAF (JA3 fingerprinting, 50 req/min search rate limits) + reCAPTCHA Enterprise edge token validation.
     *   [ ] Cloud Spanner autoscaling configured for 3,500 baseline and 5,500 peak concurrent users.
-*   **Deliverable 5.2: Disaster Recovery & 10-Year WORM Storage**
+*   **Deliverable 5.2: Disaster Recovery, 10-Year WORM & Open Data OCDS Offload**
     *   [ ] Active-Passive multi-region setup (Primary: `asia-southeast1`, Secondary DR: `asia-southeast2`).
     *   [ ] Verified RPO $< 15\text{ minutes}$ and RTO $< 1\text{ hour}$ automated failover.
     *   [ ] Cloud Storage Bucket Lock with Object Retention in Compliance Mode (10-year non-erasable lock per COA circulars).
+    *   [ ] **Dedicated Open Data OCDS Bulk Offload:** Nightly scheduled BigQuery Enterprise Slot export publishing standardized Open Contracting Data Standard (OCDS) JSON/CSV/Parquet dumps to public Cloud Storage + Cloud CDN to de-monetize commercial web scrapers.
 *   **Deliverable 5.3: Performance & SLA Verification**
     *   [ ] Interactive UI Searches: $< 1,000\text{ ms}$.
     *   [ ] Batch Document Parsing: $< 15\text{ seconds}$ per 20-page document.
@@ -134,13 +136,13 @@ gantt
 | **Compute** | Docker Compose / Local Host | Cloud Run (Serverless) | Google Kubernetes Engine (GKE Autopilot) |
 | **Relational DB** | Local PostgreSQL 15 | Cloud SQL for PostgreSQL | AlloyDB HA (Operations) |
 | **Graph & Bids** | Local SQLite Mock | Spanner Emulator / Cloud SQL | Cloud Spanner + Spanner Graph (GQL) |
-| **Analytics & ML** | Local Parquet / SQLite | BigQuery Sandbox | BigQuery + BigQuery ML (`ARIMA_PLUS`, PH Holidays) |
+| **Analytics & ML** | Local Parquet / SQLite | BigQuery Sandbox | BigQuery Enterprise Slots + BigQuery ML (`ARIMA_PLUS`) |
 | **Caching** | Local Redis Container | Memorystore for Redis | Memorystore HA Cluster |
 | **AI Models** | Offline Parsers / ADC Sandbox | Vertex AI & Gemini Pro/Flash | Gemini 3.1 Pro & 3.7 Flash + Model Armor |
 | **Bid Security** | Local Mock Key | Cloud KMS Key Wrapping | Confidential Space Vault + Cloud KMS HSM Quorum |
 | **Security / SOC** | Local Log Files | Cloud Logging + IAP | Google SecOps (Chronicle) + Gemini SOC Agent |
 | **Secrets** | `.env.local` | Secret Manager | Secret Manager + CSI Driver |
-| **Ingress** | `localhost:3000 / :8001` | Cloud Run + IAP | Cloud Armor WAF + Global Load Balancer |
+| **Ingress & Anti-Scraping**| `localhost:3000 / :8001` | Cloud Run + Cloud Armor Std + reCAPTCHA Free | Cloud Armor Enterprise (JA3) + reCAPTCHA Enterprise Edge + OCDS CDN Offload |
 | **DR & Backup** | None | Automated Cloud SQL Backups | Multi-Region Active-Passive (RTO < 1h, RPO < 15m) |
 
 ---
@@ -155,6 +157,7 @@ gantt
 | **RSK-04** | Market-sensitive bid leaks prior to opening | Critical | Low | Sealed inside Confidential Space on Confidential VMs; Cloud KMS HSM dual-control unsealing requiring BAC + COA simultaneous tokens. |
 | **RSK-05** | Spanner Graph query latency on complex cartels | Medium | Medium | Hybrid execution: Nightly scheduled ETL graph pre-computations with on-demand bounded-hop queries ($< 60\text{ seconds}$). |
 | **RSK-06** | Regional cloud outage during tender deadlines | Critical | Low | Active-Passive multi-region architecture (Singapore/Jakarta) with automated Cloud DNS health check failover. |
+| **RSK-07** | Commercial web scraping degrading portal SLA or blocking shared agency NAT IPs | High | High | 4-tier defense: Cloud Armor JA3 TLS fingerprinting + reCAPTCHA Enterprise frictionless edge scoring (allowing shared agency NAT humans while blocking bots) + Apigee API quotas + Dedicated Open Data OCDS bulk JSON/CSV dumps on Cloud Storage/CDN to de-monetize commercial scrapers. |
 
 ---
 
