@@ -68,24 +68,24 @@ The system architecture is structured across three evolutionary stages to ensure
 
 ```mermaid
 graph TD
-    Public[Procuring Entities / Merchants / Observers] --> Armor[Cloud Armor WAF + Global Load Balancer]
-    Armor --> Gateway[Apigee API Gateway]
+    Public["Procuring Entities • Merchants • Observers"] --> Armor["Cloud Armor WAF + Global Load Balancer"]
+    Armor --> Gateway["Apigee API Gateway"]
     
-    Gateway --> GKE[GKE Autopilot: mPhilGEPS Microservices]
+    Gateway --> GKE["GKE Autopilot: mPhilGEPS Microservices"]
     
-    GKE --> AlloyDB[(AlloyDB HA: Transactions)]
-    GKE --> Spanner[(Cloud Spanner + Spanner Graph)]
-    GKE --> Cache[(Memorystore Redis Cluster)]
-    GKE --> BQ[(BigQuery: Immutable Audit & ML)]
+    GKE --> AlloyDB[("AlloyDB HA: Transactions")]
+    GKE --> Spanner[("Cloud Spanner + Spanner Graph")]
+    GKE --> Cache[("Memorystore Redis Cluster")]
+    GKE --> BQ[("BigQuery: Immutable Audit & ML")]
     
-    GKE --> ModelArmor[Google Cloud Model Armor]
-    ModelArmor --> GenAI[Vertex AI: Gemini 3.1 Pro & 3.7 Flash]
+    GKE --> ModelArmor["Google Cloud Model Armor"]
+    ModelArmor --> GenAI["Vertex AI: Gemini 3.1 Pro & 3.7 Flash"]
     
-    GKE --> Vault[Confidential Space: Sealed Bid Vault]
-    Vault --> KMS[Cloud KMS HSM: Sovereign Root of Trust]
+    GKE --> Vault["Confidential Space: Sealed Bid Vault"]
+    Vault --> KMS["Cloud KMS HSM: Sovereign Root of Trust"]
     
-    GKE -.-> SecOps[Google SecOps Chronicle: Agentic SOC]
-    GKE -.-> Obs[Cloud Monitoring & Cloud Logging]
+    GKE -.-> SecOps["Google SecOps Chronicle: Agentic SOC"]
+    GKE -.-> Obs["Cloud Monitoring & Cloud Logging"]
 ```
 
 ---
@@ -121,22 +121,22 @@ The multi-agent ecosystem maintains full flexibility to support two concurrent f
 
 ```mermaid
 graph TD
-    InternalUsers[Internal: BAC / PS-DBM / COA] -->|Native SSO| GE_UI[Gemini Enterprise Workspace UI]
-    ExternalUsers[External: Merchants / Citizens] -->|HTTPS / WSS| CloudRun_UI[Cloud Run: Multi-Channel Web Widget]
+    InternalUsers["Internal: BAC • PS-DBM • COA"] -->|"Native SSO"| GE_UI["Gemini Enterprise Workspace UI"]
+    ExternalUsers["External: Merchants • Citizens"] -->|"HTTPS / WSS"| CloudRun_UI["Cloud Run: Multi-Channel Web Widget"]
     
-    GE_UI --> ModelArmor[Google Cloud Model Armor & DLP Filter]
-    CloudRun_UI --> CloudArmor[Cloud Armor WAF & Apigee]
+    GE_UI --> ModelArmor["Google Cloud Model Armor & DLP Filter"]
+    CloudRun_UI --> CloudArmor["Cloud Armor WAF & Apigee"]
     CloudArmor --> ModelArmor
     
-    ModelArmor --> Supervisor[Supervisor Agent: Intent Classifier & Router<br/>Powered by Gemini 3.7 Flash]
+    ModelArmor --> Supervisor["Supervisor Agent: Intent Classifier & Router<br/>Powered by Gemini 3.7 Flash"]
     
-    Supervisor -->|Merchant Guidance & Pre-Flight| BiddingAgent[Merchant Onboarding & Bidding Agent]
-    Supervisor -->|Procurement Rules & IRR| BACAgent[BAC Advisor Agent<br/>Grounded via OKF]
-    Supervisor -->|COA Audit & Spending Queries| AuditorAgent[Public Transparency & COA Auditor Agent]
+    Supervisor -->|"Merchant Guidance & Pre-Flight"| BiddingAgent["Merchant Onboarding & Bidding Agent"]
+    Supervisor -->|"Procurement Rules & IRR"| BACAgent["BAC Advisor Agent<br/>Grounded via OKF"]
+    Supervisor -->|"COA Audit & Spending Queries"| AuditorAgent["Public Transparency & COA Auditor Agent"]
     
-    BiddingAgent --> DocAI_API[Document AI & GOP-OMR Registry API]
-    BACAgent --> OKF_Corpus[(Structured Open Knowledge Format Corpus<br/>RA 12009 IRR & GPPB Docs)]
-    AuditorAgent --> SpannerGQL[Spanner Graph GQL & BigQuery Audit Ledger]
+    BiddingAgent --> DocAI_API["Document AI & GOP-OMR Registry API"]
+    BACAgent --> OKF_Corpus[("Structured Open Knowledge Format Corpus<br/>RA 12009 IRR & GPPB Docs")]
+    AuditorAgent --> SpannerGQL["Spanner Graph GQL & BigQuery Audit Ledger"]
 ```
 
 *   **Supervisor Agent (Intent Classifier & Router):**

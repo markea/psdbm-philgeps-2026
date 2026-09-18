@@ -69,25 +69,25 @@ To operationalize RA 12009, mPhilGEPS integrates Google’s cutting-edge **Gemin
 
 ```mermaid
 graph TD
-    UI[mPhilGEPS Multi-Channel Portal UI<br/>Procuring Entities | Merchants | COA Observers] -->|HTTPS / gRPC mTLS| GW[API Gateway & Google Cloud Armor<br/>WAF, DDoS Protection, Rate Limiting, Geo-Fencing]
+    UI["mPhilGEPS Multi-Channel Portal UI<br/>Procuring Entities • Merchants • COA Observers"] -->|"HTTPS / gRPC mTLS"| GW["API Gateway & Google Cloud Armor<br/>WAF, DDoS Protection, Rate Limiting, Geo-Fencing"]
     
-    GW --> DocPipe[Document Pipeline<br/>GOP-OMR Registration]
-    GW --> TxPipe[Transaction & In-Database ML<br/>Procurement Core]
-    GW --> MASPipe[Multi-Agent System<br/>Antigravity & Agent Builder Hub]
+    GW --> DocPipe["Document Pipeline<br/>GOP-OMR Registration"]
+    GW --> TxPipe["Transaction & In-Database ML<br/>Procurement Core"]
+    GW --> MASPipe["Multi-Agent System<br/>Antigravity & Agent Builder Hub"]
     
-    DocPipe --> DocAI[Document AI Custom Parser<br/>+]
-    DocPipe --> GemFlash1[Gemini 3.7 Flash<br/>Audit Validation]
+    DocPipe --> DocAI["Document AI Custom Parser<br/>(SEC, DTI, BIR, AFS)"]
+    DocPipe --> GemFlash1["Gemini 3.7 Flash<br/>Audit Validation"]
     
-    TxPipe --> SpannerGraph[Cloud Spanner + Spanner Graph<br/>Bids & Cartels]
-    TxPipe --> BQML[BigQuery ML<br/>Demand & Anomalies]
+    TxPipe --> SpannerGraph["Cloud Spanner + Spanner Graph<br/>Bids & Cartels"]
+    TxPipe --> BQML["BigQuery ML<br/>Demand & Anomalies"]
     
-    MASPipe --> AgentBuilder[Gemini Enterprise Agent Builder<br/>Grounded RAG / RA 12009 Playbook]
-    MASPipe --> GemFlash2[Gemini 3.7 Flash<br/>Sub-Second Intent Routing]
+    MASPipe --> AgentBuilder["Gemini Enterprise Agent Builder<br/>Grounded RAG / RA 12009 Playbook"]
+    MASPipe --> GemFlash2["Gemini 3.7 Flash<br/>Sub-Second Intent Routing"]
     
-    subgraph Sovereign_Governance[Sovereign Cloud Governance & Security Layer]
-        SecOps[Google SecOps Chronicle<br/>Agentic SOC Loop]
-        ModelArmor[Model Armor & DLP<br/>RA 10173 Privacy]
-        BidVault[Cloud KMS HSM & Confidential Space<br/>Confidential Bid Vault]
+    subgraph Sovereign_Governance ["Sovereign Cloud Governance & Security Layer"]
+        SecOps["Google SecOps Chronicle<br/>Agentic SOC Loop"]
+        ModelArmor["Model Armor & DLP<br/>RA 10173 Privacy"]
+        BidVault["Cloud KMS HSM & Confidential Space<br/>Confidential Bid Vault"]
     end
     
     DocPipe -.-> Sovereign_Governance
